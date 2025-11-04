@@ -46,6 +46,18 @@ See [DOCUMENTATION.md](./DOCUMENTATION.md) for comprehensive guides on:
 
 ### 📸 Screenshots
 
-![Pocketbook Explorer](https://github.com/user-attachments/assets/b1bb3c6c-e63c-4083-922c-7d0477f73602)
+#### Explorer View - Light Mode
+Browse and discover claimed addresses on the decentralized network
+![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/88367467-2ffa-4bcb-9d0b-a88c0da362ef)
+
+#### Explorer with Statistics
+Real-time network statistics and recent claims
+![Explorer with Stats](https://github.com/user-attachments/assets/727600f8-2c67-42e6-9ab5-c0e87dd08fa7)
+
+#### Main Interface
+Complete user interface with navigation and wallet integration
+![Main Interface](https://github.com/user-attachments/assets/f9e6145f-5ba4-4dd5-b047-3c10c0225490)
+
+---
 
 Built with ❤️ for a decentralized future
