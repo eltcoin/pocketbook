@@ -98,11 +98,11 @@ export async function decryptData(encryptedData, privateKey) {
  */
 function arrayBufferToBase64(buffer) {
   const bytes = new Uint8Array(buffer);
-  let binary = '';
+  const chars = [];
   for (let i = 0; i < bytes.byteLength; i++) {
-    binary += String.fromCharCode(bytes[i]);
+    chars.push(String.fromCharCode(bytes[i]));
   }
-  return window.btoa(binary);
+  return window.btoa(chars.join(''));
 }
 
 /**
