@@ -26,9 +26,9 @@ function createEthersStore() {
 
   // Contract address - set via environment variable or update after deployment
   if (!import.meta.env.VITE_CONTRACT_ADDRESS) {
-    throw new Error("VITE_CONTRACT_ADDRESS environment variable is not set. Please set it to your deployed contract address.");
+    console.warn("VITE_CONTRACT_ADDRESS environment variable is not set. Please set it to your deployed contract address.");
   }
-  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS;
+  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
 
   return {
     subscribe,
