@@ -24,8 +24,8 @@ function createEthersStore() {
     "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)"
   ];
 
-  // Placeholder contract address - would be deployed address
-  const CONTRACT_ADDRESS = "0x0000000000000000000000000000000000000000";
+  // Contract address - set via environment variable or update after deployment
+  const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
 
   return {
     subscribe,
@@ -80,16 +80,13 @@ function createEthersStore() {
       });
     },
     signMessage: async (message) => {
-      const store = writable({});
-      const unsubscribe = subscribe(store.set);
-      const currentStore = await new Promise(resolve => {
-        const unsub = subscribe(val => {
-          resolve(val);
-          unsub();
-        });
+      let currentStore;
+      const unsubscribe = subscribe(val => {
+        currentStore = val;
       });
+      unsubscribe();
       
-      if (!currentStore.signer) {
+      if (!currentStore || !currentStore.signer) {
         throw new Error('No signer available');
       }
       

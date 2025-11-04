@@ -141,6 +141,7 @@ contract AddressClaim {
     
     /**
      * @dev Remove viewer from whitelist
+     * Note: For production with large whitelists, consider using a mapping for O(1) lookups
      */
     function removeViewer(address _viewer) public {
         require(isClaimed[msg.sender], "Address not claimed");
@@ -260,6 +261,11 @@ contract AddressClaim {
             r := mload(add(sig, 32))
             s := mload(add(sig, 64))
             v := byte(0, mload(add(sig, 96)))
+        }
+        
+        // Normalize v value to 27 or 28 for Ethereum signatures
+        if (v < 27) {
+            v += 27;
         }
     }
 }
