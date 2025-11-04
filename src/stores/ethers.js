@@ -30,6 +30,9 @@ function createEthersStore() {
   }
   const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x0000000000000000000000000000000000000000";
 
+  // Store reference to account change handler to prevent memory leaks
+  let accountsChangedHandler = null;
+
   return {
     subscribe,
     connect: async () => {
@@ -54,14 +57,20 @@ function createEthersStore() {
             network: network.name
           }));
 
+          // Remove previous listener if it exists to prevent memory leaks
+          if (accountsChangedHandler) {
+            window.ethereum.removeListener('accountsChanged', accountsChangedHandler);
+          }
+
           // Listen for account changes
-          window.ethereum.on('accountsChanged', (accounts) => {
+          accountsChangedHandler = (accounts) => {
             if (accounts.length === 0) {
               ethersStore.disconnect();
             } else {
               ethersStore.connect();
             }
-          });
+          };
+          window.ethereum.on('accountsChanged', accountsChangedHandler);
 
           return { success: true, address };
         } else {

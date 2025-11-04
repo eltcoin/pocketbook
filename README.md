@@ -47,16 +47,21 @@ See [DOCUMENTATION.md](./DOCUMENTATION.md) for comprehensive guides on:
 ### 📸 Screenshots
 
 #### Explorer View - Light Mode
-Browse and discover claimed addresses on the decentralized network
-![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/88367467-2ffa-4bcb-9d0b-a88c0da362ef)
+Browse and discover claimed addresses on the decentralized network with statistics dashboard
 
-#### Explorer with Statistics
-Real-time network statistics and recent claims
-![Explorer with Stats](https://github.com/user-attachments/assets/727600f8-2c67-42e6-9ab5-c0e87dd08fa7)
+![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/0e858d84-1acd-4e64-9c6b-5acd8afd60f2)
 
-#### Main Interface
-Complete user interface with navigation and wallet integration
-![Main Interface](https://github.com/user-attachments/assets/f9e6145f-5ba4-4dd5-b047-3c10c0225490)
+*Full-page explorer view showing search, statistics, and recent claims*
+
+#### Dark Mode
+Night mode support for comfortable viewing
+
+![Dark Mode Explorer](./screenshots/explorer-dark-mode.png)
+
+#### Claim Address Page
+Register your identity on the blockchain
+
+![Claim Address Page](./screenshots/claim-page-dark.png)
 
 ---
 
