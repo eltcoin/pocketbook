@@ -134,7 +134,14 @@ contract AddressClaim {
         require(isClaimed[msg.sender], "Address not claimed");
         require(claims[msg.sender].metadata.isPrivate, "Metadata is not private");
         
-        claims[msg.sender].metadata.allowedViewers.push(_viewer);
+        // Prevent duplicate viewers
+        address[] storage viewers = claims[msg.sender].metadata.allowedViewers;
+        for (uint i = 0; i < viewers.length; i++) {
+            if (viewers[i] == _viewer) {
+                revert("Viewer already added");
+            }
+        }
+        viewers.push(_viewer);
         
         emit ViewerAdded(msg.sender, _viewer);
     }
