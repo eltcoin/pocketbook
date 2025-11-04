@@ -154,14 +154,17 @@ contract AddressClaim {
         require(isClaimed[msg.sender], "Address not claimed");
         
         address[] storage viewers = claims[msg.sender].metadata.allowedViewers;
+        bool found = false;
         for (uint i = 0; i < viewers.length; i++) {
             if (viewers[i] == _viewer) {
                 viewers[i] = viewers[viewers.length - 1];
                 viewers.pop();
                 emit ViewerRemoved(msg.sender, _viewer);
+                found = true;
                 break;
             }
         }
+        require(found, "Viewer not found");
     }
     
     /**
