@@ -260,16 +260,18 @@
 
 <style>
   .social-graph {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     margin-top: 2rem;
   }
 
   .social-graph.dark {
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .social-header {
@@ -282,6 +284,7 @@
   .social-header h2 {
     margin: 0;
     font-size: 1.5rem;
+    font-weight: 700;
   }
 
   .action-buttons {
@@ -292,29 +295,43 @@
   .btn-social {
     padding: 0.5rem 1rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 0.9rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
   }
 
   .btn-follow {
-    background: #667eea;
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
+  }
+
+  .social-graph.dark .btn-follow {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-follow:hover {
-    background: #5568d3;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-unfollow {
-    background: #e0e0e0;
-    color: #333;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
+  }
+
+  .social-graph.dark .btn-unfollow {
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .btn-unfollow:hover {
-    background: #d0d0d0;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-add-friend {
@@ -356,13 +373,18 @@
   }
 
   .spinner {
-    border: 3px solid rgba(0, 0, 0, 0.1);
+    border: 3px solid #e2e8f0;
     border-radius: 50%;
-    border-top: 3px solid #667eea;
+    border-top: 3px solid #0f172a;
     width: 40px;
     height: 40px;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
+  }
+
+  .social-graph.dark .spinner {
+    border-color: #334155;
+    border-top-color: #f1f5f9;
   }
 
   @keyframes spin {
@@ -380,11 +402,11 @@
   .stat-item {
     text-align: center;
     padding: 1rem;
-    background: #f7fafc;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.3s ease;
-    border: 2px solid transparent;
+    transition: all 0.2s ease;
     width: 100%;
     font-family: inherit;
     font-size: inherit;
@@ -392,36 +414,42 @@
 
   .stat-item:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .stat-item.active {
-    border-color: #667eea;
-    background: #edf2f7;
+    border-color: #0f172a;
+    background: #f1f5f9;
   }
 
   .dark .stat-item {
-    background: #16213e;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .dark .stat-item.active {
-    background: #0f3460;
+    background: #334155;
+    border-color: #f1f5f9;
   }
 
   .stat-value {
     font-size: 2rem;
     font-weight: bold;
-    color: #667eea;
+    color: #0f172a;
     margin-bottom: 0.25rem;
+  }
+
+  .dark .stat-value {
+    color: #f1f5f9;
   }
 
   .stat-label {
     font-size: 0.9rem;
-    color: #666;
+    color: #64748b;
   }
 
   .dark .stat-label {
-    color: #a0aec0;
+    color: #94a3b8;
   }
 
   .social-content {
@@ -431,17 +459,19 @@
   .address-list h3 {
     margin-bottom: 1rem;
     font-size: 1.2rem;
+    font-weight: 600;
   }
 
   .address-item {
     display: flex;
     align-items: center;
     padding: 0.75rem 1rem;
-    background: #f7fafc;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     margin-bottom: 0.5rem;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
     width: 100%;
     border: none;
     text-align: left;
@@ -450,16 +480,17 @@
   }
 
   .address-item:hover {
-    background: #edf2f7;
     transform: translateX(4px);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
   }
 
   .dark .address-item {
-    background: #16213e;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .dark .address-item:hover {
-    background: #0f3460;
+    background: #334155;
   }
 
   .address-icon {
@@ -469,19 +500,27 @@
 
   .address-text {
     flex: 1;
-    font-family: monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 0.9rem;
   }
 
   .arrow {
-    color: #667eea;
+    color: #0f172a;
     font-weight: bold;
+  }
+
+  .dark .arrow {
+    color: #f1f5f9;
   }
 
   .empty-message {
     text-align: center;
     padding: 2rem;
-    color: #999;
+    color: #64748b;
+  }
+
+  .dark .empty-message {
+    color: #94a3b8;
   }
 
   @media (max-width: 768px) {

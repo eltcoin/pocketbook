@@ -268,16 +268,18 @@
 
 <style>
   .graph-explorer {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 1.5rem;
     margin-top: 2rem;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .graph-explorer.dark {
-    background: #1a1a2e;
-    color: #e0e0e0;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .graph-header {
@@ -290,42 +292,48 @@
   .graph-header h3 {
     margin: 0;
     font-size: 1.3rem;
-    color: #667eea;
+    font-weight: 600;
+    color: #0f172a;
   }
 
   .graph-explorer.dark .graph-header h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .btn-toggle {
     padding: 0.5rem 1rem;
-    background: #667eea;
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     border: none;
-    border-radius: 8px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: 600;
-    transition: all 0.3s ease;
+    transition: all 0.2s ease;
+  }
+
+  .graph-explorer.dark .btn-toggle {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-toggle:hover {
-    background: #5568d3;
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .graph-container {
     width: 100%;
     height: 500px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     overflow: hidden;
-    background: #f9f9f9;
+    background: #f8fafc;
     margin-bottom: 1rem;
   }
 
   .graph-explorer.dark .graph-container {
-    border-color: rgba(255, 255, 255, 0.1);
-    background: #16213e;
+    border-color: #334155;
+    background: #0f172a;
   }
 
   .graph-legend {
@@ -333,13 +341,15 @@
     gap: 1.5rem;
     flex-wrap: wrap;
     padding: 1rem;
-    background: #f7fafc;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     margin-bottom: 1rem;
   }
 
   .graph-explorer.dark .graph-legend {
-    background: #16213e;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .legend-item {
@@ -361,28 +371,36 @@
 
   .graph-info {
     padding: 0.75rem 1rem;
-    background: rgba(102, 126, 234, 0.1);
-    border-left: 4px solid #667eea;
-    border-radius: 4px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0f172a;
+    border-radius: 8px;
     font-size: 0.9rem;
+  }
+
+  .graph-explorer.dark .graph-info {
+    background: #334155;
+    border-color: #334155;
+    border-left-color: #f1f5f9;
   }
 
   .graph-info p {
     margin: 0;
+    color: #64748b;
   }
 
-  .graph-explorer.dark .graph-info {
-    background: rgba(102, 126, 234, 0.2);
+  .graph-explorer.dark .graph-info p {
+    color: #94a3b8;
   }
 
   .collapsed-message {
     text-align: center;
     padding: 2rem;
-    color: #666;
+    color: #64748b;
   }
 
   .graph-explorer.dark .collapsed-message {
-    color: #a0aec0;
+    color: #94a3b8;
   }
 
   @media (max-width: 768px) {
