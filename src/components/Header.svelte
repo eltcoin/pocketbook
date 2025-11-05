@@ -61,6 +61,9 @@
       <button class="nav-btn" on:click={() => navigateTo('claim')}>
         Claim Address
       </button>
+      <button class="nav-btn admin-btn" on:click={() => navigateTo('admin')}>
+        🛠️ Admin
+      </button>
     </nav>
 
     <div class="controls">
@@ -161,6 +164,21 @@
   header.dark .nav-btn:hover {
     background: rgba(167, 139, 250, 0.1);
     color: #a78bfa;
+  }
+
+  .admin-btn {
+    border: 2px solid rgba(255, 193, 7, 0.3);
+  }
+
+  .admin-btn:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border-color: rgba(255, 193, 7, 0.5);
+  }
+
+  header.dark .admin-btn:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
   }
 
   .controls {
