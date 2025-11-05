@@ -28,6 +28,7 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 - 🏷️ **ENS Integration** - Use human-readable names (name.eth) instead of addresses with full ENS resolution and reverse lookup
 - 🌐 **Multi-Chain Support** - Simultaneous connectivity to Ethereum, Polygon, BSC, Arbitrum, Optimism, and Avalanche
 - 🔗 **Cross-Chain Identity** - View and manage claims across multiple blockchain networks
+- 📦 **IPFS Storage** - Decentralized metadata storage with DID-based content routing
 - 🔒 **Privacy Controls** - Choose what's public and whitelist private viewers
 - 🌓 **Dark Mode** - Beautiful UI with light and dark themes
 - 💼 **Contract Support** - Claim smart contract and token addresses
@@ -46,6 +47,12 @@ See [docs/ENS_INTEGRATION.md](./docs/ENS_INTEGRATION.md) for ENS integration det
 - ENS name resolution and reverse lookup
 - Supported networks and features
 - API reference and usage examples
+
+See [docs/IPFS_INTEGRATION.md](./docs/IPFS_INTEGRATION.md) for IPFS storage details:
+- Decentralized metadata storage
+- DID-based content routing
+- Extensibility for future features
+- API reference and examples
 
 ### 🏗️ Tech Stack
 
