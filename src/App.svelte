@@ -1,13 +1,15 @@
 <script>
   import { onMount } from 'svelte';
-  import { ethersStore } from './stores/ethers';
+  import { multiChainStore } from './stores/multichain';
   import { themeStore } from './stores/theme';
   import Header from './components/Header.svelte';
   import AddressClaim from './components/AddressClaim.svelte';
   import Explorer from './components/Explorer.svelte';
   import AddressView from './components/AddressView.svelte';
+  import AdminPanel from './components/AdminPanel.svelte';
+  import Toast from './components/Toast.svelte';
 
-  let currentView = 'explorer'; // 'explorer', 'claim', 'address'
+  let currentView = 'explorer'; // 'explorer', 'claim', 'address', 'admin'
   let selectedAddress = null;
   let darkMode = false;
 
@@ -33,8 +35,12 @@
       <AddressClaim on:viewChange={handleViewChange} />
     {:else if currentView === 'address' && selectedAddress}
       <AddressView address={selectedAddress} on:viewChange={handleViewChange} />
+    {:else if currentView === 'admin'}
+      <AdminPanel on:viewChange={handleViewChange} />
     {/if}
   </div>
+  
+  <Toast />
 </main>
 
 <style>

@@ -213,9 +213,131 @@ The platform enables building a decentralized web of trust:
 3. **Network Effects**: Connect with other verified addresses
 4. **Trustless Verification**: No intermediaries required
 
+## Multi-Chain Support
+
+Pocketbook supports simultaneous connections to multiple blockchain networks, allowing users to interact with claims across different chains seamlessly.
+
+### Supported Networks
+
+#### Mainnets
+- **Ethereum** - The original smart contract platform
+- **Polygon** - Low-cost, high-speed layer 2 solution
+- **BNB Smart Chain (BSC)** - Binance's EVM-compatible blockchain
+- **Arbitrum One** - Optimistic rollup scaling solution
+- **Optimism** - Another optimistic rollup for Ethereum
+- **Avalanche** - High-throughput blockchain platform
+
+#### Testnets
+- **Sepolia** - Ethereum testnet
+- **Polygon Mumbai** - Polygon testnet
+
+### Features
+
+1. **Simultaneous Multi-Chain Connectivity**
+   - Connect to all configured networks at once
+   - View claims across all chains simultaneously
+   - No need to manually switch networks to see data
+
+2. **Cross-Chain Claim Viewing**
+   - See if an address has been claimed on multiple networks
+   - Compare claim data across chains
+   - Unified view of multi-chain identity
+
+3. **Network Switching**
+   - Easy switching between networks via MetaMask
+   - Automatic network addition if not configured
+   - Primary network indicator in the UI
+
+4. **Per-Network Contract Deployment**
+   - Each network can have its own contract address
+   - Configured via environment variables
+   - Graceful handling of networks without deployed contracts
+
+### Configuration
+
+Configure contract addresses for each network in your `.env` file:
+
+```bash
+# Ethereum Mainnet
+VITE_CONTRACT_ADDRESS_ETHEREUM=0xYourContractAddressHere
+
+# Polygon
+VITE_CONTRACT_ADDRESS_POLYGON=0xYourContractAddressHere
+
+# BSC
+VITE_CONTRACT_ADDRESS_BSC=0xYourContractAddressHere
+
+# Arbitrum
+VITE_CONTRACT_ADDRESS_ARBITRUM=0xYourContractAddressHere
+
+# Optimism
+VITE_CONTRACT_ADDRESS_OPTIMISM=0xYourContractAddressHere
+
+# Avalanche
+VITE_CONTRACT_ADDRESS_AVALANCHE=0xYourContractAddressHere
+
+# Testnets
+VITE_CONTRACT_ADDRESS_SEPOLIA=0xYourContractAddressHere
+VITE_CONTRACT_ADDRESS_MUMBAI=0xYourContractAddressHere
+```
+
+### Architecture
+
+The multi-chain system uses two key stores:
+
+1. **multiChainStore** - Main store for managing multiple blockchain connections
+   - Maintains separate providers for each network
+   - Handles primary wallet connection via MetaMask
+   - Provides methods to query across all chains
+
+2. **Derived Stores**
+   - `availableChains` - Lists all accessible networks
+   - `primaryNetwork` - Information about the currently active network
+
+### Usage Examples
+
+#### Query Claims Across All Chains
+
+```javascript
+import { multiChainStore } from './stores/multichain';
+
+// Get claims for an address across all configured chains
+const claims = await multiChainStore.getClaimsAcrossChains('0xYourAddress');
+
+// claims = [
+//   { chainId: 1, network: 'Ethereum', claim: {...} },
+//   { chainId: 137, network: 'Polygon', claim: {...} }
+// ]
+```
+
+#### Check Specific Chain
+
+```javascript
+// Check if an address is claimed on a specific chain
+const result = await multiChainStore.checkClaimOnChain(137, '0xYourAddress');
+
+if (result.success && result.isClaimed) {
+  console.log('Address is claimed on Polygon');
+}
+```
+
+#### Get Chain-Specific Contract
+
+```javascript
+// Get contract instance for a specific chain
+const polygonContract = multiChainStore.getChainContract(137);
+
+// Use the contract for read operations
+const claim = await polygonContract.getClaim('0xYourAddress');
+```
+
 ## Roadmap
 
-- [ ] Multi-chain support (Polygon, BSC, Arbitrum, etc.)
+- [x] Multi-chain support (Polygon, BSC, Arbitrum, etc.) - **COMPLETED**
+  - Simultaneous multi-chain connectivity
+  - Cross-chain claim viewing
+  - Network switching with MetaMask
+  - Support for 6 mainnets and 2 testnets
 - [ ] ENS integration
 - [ ] IPFS metadata storage
 - [ ] Social graph features

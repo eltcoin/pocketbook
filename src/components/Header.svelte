@@ -1,7 +1,8 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { ethersStore } from '../stores/ethers';
+  import { multiChainStore, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import NetworkSelector from './NetworkSelector.svelte';
 
   const dispatch = createEventDispatcher();
   
@@ -9,9 +10,9 @@
   let address = null;
   let darkMode = false;
 
-  ethersStore.subscribe(value => {
+  multiChainStore.subscribe(value => {
     connected = value.connected;
-    address = value.address;
+    address = value.primaryAddress;
   });
 
   themeStore.subscribe(value => {
@@ -19,16 +20,17 @@
   });
 
   async function handleConnect() {
-    const result = await ethersStore.connect();
+    const result = await multiChainStore.connect();
     if (result.success) {
       console.log('Connected:', result.address);
+      console.log('Available chains:', result.availableChains);
     } else {
       alert('Failed to connect: ' + result.error);
     }
   }
 
   function handleDisconnect() {
-    ethersStore.disconnect();
+    multiChainStore.disconnect();
   }
 
   function navigateTo(view) {
@@ -59,6 +61,9 @@
       <button class="nav-btn" on:click={() => navigateTo('claim')}>
         Claim Address
       </button>
+      <button class="nav-btn admin-btn" on:click={() => navigateTo('admin')}>
+        🛠️ Admin
+      </button>
     </nav>
 
     <div class="controls">
@@ -67,6 +72,7 @@
       </button>
       
       {#if connected}
+        <NetworkSelector />
         <div class="wallet-info">
           <span class="address">{shortenAddress(address)}</span>
           <button class="btn-disconnect" on:click={handleDisconnect}>
@@ -158,6 +164,21 @@
   header.dark .nav-btn:hover {
     background: rgba(167, 139, 250, 0.1);
     color: #a78bfa;
+  }
+
+  .admin-btn {
+    border: 2px solid rgba(255, 193, 7, 0.3);
+  }
+
+  .admin-btn:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
+    border-color: rgba(255, 193, 7, 0.5);
+  }
+
+  header.dark .admin-btn:hover {
+    background: rgba(255, 193, 7, 0.1);
+    color: #ffc107;
   }
 
   .controls {
