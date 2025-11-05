@@ -35,6 +35,7 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 - 🔌 **Interoperability** - DID-based identity works across decentralized platforms
 - 👥 **Social Graph** - Follow/unfollow users, send friend requests, and build your decentralized network
 - 🔑 **PGP Signatures** - Add PGP signatures for additional cryptographic verification
+- 🏆 **Reputation System** - PGP-style web of trust with Evidence-Based Subjective Logic for computing trustworthiness
 
 ### 📚 Documentation
 
@@ -55,6 +56,12 @@ See [docs/IPFS_INTEGRATION.md](./docs/IPFS_INTEGRATION.md) for IPFS storage deta
 - DID-based content routing
 - Extensibility for future features
 - API reference and examples
+
+See [docs/REPUTATION_SYSTEM.md](./docs/REPUTATION_SYSTEM.md) for reputation system details:
+- PGP-style web of trust with keysigning attestations
+- Evidence-Based Subjective Logic algorithm
+- On-chain attestations with off-chain reputation calculation
+- API reference and mathematical foundations
 
 ### 🏗️ Tech Stack
 
