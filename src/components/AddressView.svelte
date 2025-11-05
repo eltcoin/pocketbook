@@ -1,7 +1,8 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
-  import { ethersStore } from '../stores/ethers';
+  import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import MultiChainView from './MultiChainView.svelte';
 
   export let address;
 
@@ -18,8 +19,8 @@
     darkMode = value.darkMode;
   });
 
-  ethersStore.subscribe(value => {
-    userAddress = value.address;
+  multiChainStore.subscribe(value => {
+    userAddress = value.primaryAddress;
   });
 
   onMount(async () => {
@@ -157,6 +158,8 @@
         {/if}
       </div>
 
+      <MultiChainView {address} />
+
       <div class="verification-box">
         <h3>🔐 Cryptographic Verification</h3>
         <p>This claim is secured by a cryptographic signature proving ownership of the address.</p>
@@ -190,6 +193,8 @@
           </div>
         {/if}
       </div>
+
+      <MultiChainView {address} />
 
       <div class="what-is-claiming">
         <h3>What is Address Claiming?</h3>

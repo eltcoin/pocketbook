@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { ethersStore } from '../stores/ethers';
+  import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
 
   const dispatch = createEventDispatcher();
@@ -27,9 +27,9 @@
     darkMode = value.darkMode;
   });
 
-  ethersStore.subscribe(value => {
+  multiChainStore.subscribe(value => {
     connected = value.connected;
-    address = value.address;
+    address = value.primaryAddress;
   });
 
   async function handleClaim() {
@@ -49,7 +49,7 @@
     try {
       // Create message to sign
       const message = `Claiming address ${address} with name: ${formData.name}`;
-      const signature = await ethersStore.signMessage(message);
+      const signature = await multiChainStore.signMessage(message);
 
       // In a real implementation, this would call the smart contract
       console.log('Claiming address with signature:', signature);

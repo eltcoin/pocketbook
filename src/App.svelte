@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ethersStore } from './stores/ethers';
+  import { multiChainStore } from './stores/multichain';
   import { themeStore } from './stores/theme';
   import Header from './components/Header.svelte';
   import AddressClaim from './components/AddressClaim.svelte';

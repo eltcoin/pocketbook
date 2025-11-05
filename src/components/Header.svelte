@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { ethersStore } from '../stores/ethers';
+  import { multiChainStore, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import NetworkSelector from './NetworkSelector.svelte';
 
@@ -10,9 +10,9 @@
   let address = null;
   let darkMode = false;
 
-  ethersStore.subscribe(value => {
+  multiChainStore.subscribe(value => {
     connected = value.connected;
-    address = value.address;
+    address = value.primaryAddress;
   });
 
   themeStore.subscribe(value => {
@@ -20,16 +20,17 @@
   });
 
   async function handleConnect() {
-    const result = await ethersStore.connect();
+    const result = await multiChainStore.connect();
     if (result.success) {
       console.log('Connected:', result.address);
+      console.log('Available chains:', result.availableChains);
     } else {
       alert('Failed to connect: ' + result.error);
     }
   }
 
   function handleDisconnect() {
-    ethersStore.disconnect();
+    multiChainStore.disconnect();
   }
 
   function navigateTo(view) {

@@ -1,12 +1,12 @@
 <script>
-  import { ethersStore } from '../stores/ethers';
+  import { multiChainStore, availableChains, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { getMainnetNetworks, getTestnetNetworks } from '../config/networks';
 
   let darkMode = false;
   let connected = false;
-  let chainId = null;
-  let networkConfig = null;
+  let primaryChainId = null;
+  let primaryNetworkConfig = null;
   let showDropdown = false;
   let showTestnets = false;
 
@@ -14,10 +14,13 @@
     darkMode = value.darkMode;
   });
 
-  ethersStore.subscribe(value => {
+  multiChainStore.subscribe(value => {
     connected = value.connected;
-    chainId = value.chainId;
-    networkConfig = value.networkConfig;
+    primaryChainId = value.primaryChainId;
+  });
+
+  primaryNetwork.subscribe(value => {
+    primaryNetworkConfig = value;
   });
 
   const mainnetNetworks = getMainnetNetworks();
@@ -32,7 +35,7 @@
   }
 
   async function handleNetworkSwitch(network) {
-    const result = await ethersStore.switchNetwork(network.chainId);
+    const result = await multiChainStore.switchNetwork(network.chainId);
     if (!result.success) {
       alert(`Failed to switch network: ${result.error}`);
     }
@@ -50,11 +53,11 @@
 <svelte:window on:click={handleClickOutside} />
 
 <div class="network-selector" class:dark={darkMode}>
-  {#if connected && networkConfig}
+  {#if connected && primaryNetworkConfig}
     <button class="network-button" on:click|stopPropagation={toggleDropdown}>
-      <div class="network-badge" class:testnet={networkConfig.isTestnet}>
+      <div class="network-badge" class:testnet={primaryNetworkConfig.isTestnet}>
         <span class="network-icon">🌐</span>
-        <span class="network-name">{networkConfig.shortName}</span>
+        <span class="network-name">{primaryNetworkConfig.shortName}</span>
       </div>
       <span class="dropdown-arrow">{showDropdown ? '▲' : '▼'}</span>
     </button>
@@ -66,12 +69,12 @@
           {#each mainnetNetworks as network}
             <button 
               class="network-option" 
-              class:active={chainId === network.chainId}
+              class:active={primaryChainId === network.chainId}
               on:click|stopPropagation={() => handleNetworkSwitch(network)}
               disabled={!network.contractAddress}
             >
               <span class="network-name">{network.name}</span>
-              {#if chainId === network.chainId}
+              {#if primaryChainId === network.chainId}
                 <span class="check-mark">✓</span>
               {/if}
               {#if !network.contractAddress}
@@ -94,12 +97,12 @@
             {#each testnetNetworks as network}
               <button 
                 class="network-option" 
-                class:active={chainId === network.chainId}
+                class:active={primaryChainId === network.chainId}
                 on:click|stopPropagation={() => handleNetworkSwitch(network)}
                 disabled={!network.contractAddress}
               >
                 <span class="network-name">{network.name}</span>
-                {#if chainId === network.chainId}
+                {#if primaryChainId === network.chainId}
                   <span class="check-mark">✓</span>
                 {/if}
                 {#if !network.contractAddress}
@@ -111,7 +114,7 @@
         </div>
       </div>
     {/if}
-  {:else if connected && !networkConfig}
+  {:else if connected && !primaryNetworkConfig}
     <div class="network-badge unsupported" title="Unsupported network">
       <span class="network-icon">⚠️</span>
       <span class="network-name">Unknown</span>
