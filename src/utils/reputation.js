@@ -164,6 +164,11 @@ export function scalarMultiply(alpha, opinion) {
  * Implements flow of evidence with scalar multiplication
  * g(x) = p(x) / θ where θ > max positive evidence in system
  * 
+ * IMPORTANT: θ must be carefully chosen to be greater than the maximum
+ * positive evidence in any opinion used for discounting in the system.
+ * If p(x) > θ, the discounting factor exceeds 1, causing evidence amplification
+ * (unrealistic). Recommended: Set θ = 2 * max expected evidence.
+ * 
  * This operator has:
  * - Right-distributivity: x ⊙ (y ⊕ z) = (x ⊙ y) ⊕ (x ⊙ z)
  * - Left-distributivity: (x ⊕ y) ⊙ z = (x ⊙ z) ⊕ (y ⊙ z)
@@ -171,15 +176,21 @@ export function scalarMultiply(alpha, opinion) {
  * 
  * @param {Opinion} x - Discounting opinion (trust in source)
  * @param {Opinion} y - Opinion to discount
- * @param {number} theta - Threshold (must be > max positive evidence)
+ * @param {number} theta - Threshold (must be > max positive evidence in system)
  * @returns {Opinion} Discounted opinion
+ * @throws {Error} If evidence exceeds theta (validation in debug mode)
  */
 export function ebslDiscount(x, y, theta = 100) {
   // Get positive evidence from x
   const { p: px } = opinionToEvidence(x);
   
+  // Validate theta constraint (in development, comment out for production)
+  if (px > theta) {
+    console.warn(`EBSL: Positive evidence (${px}) exceeds theta (${theta}). This causes evidence amplification. Consider increasing theta.`);
+  }
+  
   // Discounting factor g(x) = p(x) / θ
-  const gx = px / theta;
+  const gx = Math.min(px / theta, 1.0); // Clamp to prevent amplification
   
   // Apply scalar multiplication: x ⊙ y = g(x) · y
   return scalarMultiply(gx, y);

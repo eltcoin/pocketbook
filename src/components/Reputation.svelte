@@ -128,9 +128,20 @@
 
     creatingAttestation = true;
     try {
+      // Get signer with proper error handling
+      if (!contract || !contract.runner) {
+        throw new Error('Contract not properly initialized');
+      }
+      
+      let signer;
+      try {
+        signer = await contract.runner.getSigner();
+      } catch (signerError) {
+        throw new Error('Failed to get signer. Please ensure your wallet is connected.');
+      }
+      
       // Create a simple signature (in production, use proper PGP signature)
       const message = `Attestation: ${address} at ${newAttestation.trustLevel}`;
-      const signer = await contract.runner.getSigner();
       const signature = await signer.signMessage(message);
       
       const tx = await contract.createAttestation(
