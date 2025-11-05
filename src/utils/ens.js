@@ -69,7 +69,8 @@ export function isENSName(input) {
 
   // ENS names must contain at least one dot and end with a valid TLD
   // Common TLD is .eth but ENS supports others
-  const ensPattern = /^[a-z0-9_-]+(\.[a-z0-9_-]+)+$/i;
+  // Each label must not start or end with a hyphen; allow underscores as well
+  const ensPattern = /^[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?(\.[a-z0-9_]([a-z0-9_-]*[a-z0-9_])?)+$/i;
   return ensPattern.test(input.trim());
 }
 

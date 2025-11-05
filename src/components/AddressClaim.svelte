@@ -32,8 +32,11 @@
 
   let unsubscribeMultiChain;
   let currentLookupId = 0; // Track the latest lookup request
+  let isMounted = true; // Track component mount state
   
   onMount(() => {
+    isMounted = true;
+    
     // Subscribe to multichain store
     unsubscribeMultiChain = multiChainStore.subscribe(async value => {
       connected = value.connected;
@@ -53,14 +56,14 @@
           try {
             const resolvedName = await lookupENSName(address, provider);
             
-            // Only update if this is still the most recent lookup
-            if (lookupId === currentLookupId) {
+            // Only update if this is still the most recent lookup and component is still mounted
+            if (lookupId === currentLookupId && isMounted) {
               ensName = resolvedName;
             }
           } catch (err) {
             console.error('Error looking up ENS name:', err);
-            // Only clear ensName if this is still the most recent lookup
-            if (lookupId === currentLookupId) {
+            // Only clear ensName if this is still the most recent lookup and component is still mounted
+            if (lookupId === currentLookupId && isMounted) {
               ensName = null;
             }
           }
@@ -72,6 +75,7 @@
 
     // Cleanup subscription on unmount
     return () => {
+      isMounted = false;
       if (unsubscribeMultiChain) {
         unsubscribeMultiChain();
       }
