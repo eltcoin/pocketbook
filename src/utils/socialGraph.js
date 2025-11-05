@@ -81,10 +81,19 @@ export function getCommonFriends(socialGraph1, socialGraph2) {
  * @returns {Object} Statistics object
  */
 export function calculateSocialStats(socialGraph) {
-  const totalConnections = 
-    socialGraph.followingCount + 
-    socialGraph.followersCount + 
-    socialGraph.friendsCount;
+  // Calculate unique connections (avoiding double-counting mutual follows)
+  const allConnections = new Set();
+  
+  // Add all followers
+  socialGraph.followers.forEach(addr => allConnections.add(addr.toLowerCase()));
+  
+  // Add all following
+  socialGraph.following.forEach(addr => allConnections.add(addr.toLowerCase()));
+  
+  // Add all friends (already mutual, but ensure no duplicates)
+  socialGraph.friends.forEach(addr => allConnections.add(addr.toLowerCase()));
+  
+  const totalConnections = allConnections.size;
   
   const mutualFollows = socialGraph.following.filter(addr =>
     socialGraph.followers.some(f => f.toLowerCase() === addr.toLowerCase())
@@ -162,7 +171,7 @@ export function sortByMetric(addresses, socialGraphs, sortBy = 'followers') {
 }
 
 /**
- * Validate PGP signature format
+ * Validate PGP signature format with enhanced checks
  * @param {string} signature - PGP signature to validate
  * @returns {boolean} True if signature format is valid
  */
@@ -172,10 +181,41 @@ export function validatePGPSignature(signature) {
   }
   
   const trimmed = signature.trim();
+  
+  // Check for required PGP headers and footers
   const hasBeginHeader = trimmed.includes('-----BEGIN PGP SIGNATURE-----');
   const hasEndFooter = trimmed.includes('-----END PGP SIGNATURE-----');
   
-  return hasBeginHeader && hasEndFooter;
+  if (!hasBeginHeader || !hasEndFooter) {
+    return false;
+  }
+  
+  // Check that header comes before footer
+  const headerIndex = trimmed.indexOf('-----BEGIN PGP SIGNATURE-----');
+  const footerIndex = trimmed.indexOf('-----END PGP SIGNATURE-----');
+  
+  if (headerIndex >= footerIndex) {
+    return false;
+  }
+  
+  // Extract the content between header and footer
+  const content = trimmed.substring(
+    headerIndex + '-----BEGIN PGP SIGNATURE-----'.length,
+    footerIndex
+  ).trim();
+  
+  // Basic check: content should not be empty and should contain base64-like characters
+  if (content.length === 0) {
+    return false;
+  }
+  
+  // Check if content looks like base64 (alphanumeric, +, /, =, and whitespace)
+  const base64Pattern = /^[A-Za-z0-9+/=\s\n\r]+$/;
+  if (!base64Pattern.test(content)) {
+    return false;
+  }
+  
+  return true;
 }
 
 /**

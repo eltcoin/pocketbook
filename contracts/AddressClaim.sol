@@ -790,14 +790,16 @@ contract AddressClaim {
     
     /**
      * @dev Internal helper to remove address from array
+     * @return success True if element was found and removed
      */
-    function _removeFromArray(address[] storage array, address element) internal {
+    function _removeFromArray(address[] storage array, address element) internal returns (bool) {
         for (uint i = 0; i < array.length; i++) {
             if (array[i] == element) {
                 array[i] = array[array.length - 1];
                 array.pop();
-                break;
+                return true;
             }
         }
+        return false;
     }
 }
