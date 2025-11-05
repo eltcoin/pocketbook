@@ -101,8 +101,8 @@ export async function isENSSupported(provider) {
     const chainId = Number(network.chainId);
     
     // ENS is primarily supported on Ethereum mainnet (chainId 1)
-    // It's also available on some testnets like Sepolia (11155111), Goerli (5)
-    const supportedChainIds = [1, 5, 11155111]; // Mainnet, Goerli, Sepolia
+    // It's also available on some testnets like Sepolia (11155111)
+    const supportedChainIds = [1, 11155111]; // Mainnet, Sepolia
     
     return supportedChainIds.includes(chainId);
   } catch (error) {
