@@ -51,8 +51,8 @@ When claiming an address:
 ENS integration works on the following networks:
 - **Ethereum Mainnet** (Chain ID: 1) - Primary ENS network
 - **Sepolia Testnet** (Chain ID: 11155111) - For testing
-- **Goerli Testnet** (Chain ID: 5) - For testing (deprecated but supported)
 
+> **Note:** Goerli Testnet (Chain ID: 5) was deprecated in 2023 and officially shut down in early 2024. ENS integration on Goerli is no longer supported.
 ### ENS Utility Functions
 
 The `src/utils/ens.js` module provides the following functions:
