@@ -445,6 +445,96 @@ The did:ethr method is widely supported in the decentralized identity ecosystem,
 - **3Box** - Distributed user data network
 - **Sovrin** - Self-sovereign identity network
 
+## IPFS Metadata Storage
+
+Pocketbook integrates IPFS (InterPlanetary File System) for decentralized, censorship-resistant metadata storage. This hybrid approach combines the security of on-chain storage with the flexibility and scalability of IPFS.
+
+### Architecture
+
+The system uses a **hybrid storage model**:
+
+1. **On-Chain**: Critical metadata (name, avatar, social links, IPFS CID)
+2. **IPFS**: Extended metadata, large content, and future features (social graph, reputation)
+3. **DID Routing**: Decentralized identifiers map to IPFS content for discovery
+
+### Key Features
+
+#### Content Storage
+- **Upload to IPFS**: Store JSON metadata and files
+- **Content Addressing**: Retrieve content by CID (Content Identifier)
+- **Gateway Fallback**: Automatic fallback to public IPFS gateways
+- **Pinning**: Local and remote pinning support for persistence
+
+#### DID-Based Routing
+```javascript
+// Store content with DID association
+const did = "did:ethr:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1";
+const result = await didIPFSRouter.storeWithDID(did, metadata);
+
+// Retrieve content by DID
+const content = await didIPFSRouter.retrieveByDID(did);
+```
+
+#### Smart Contract Integration
+- `getIPFSCID(address)` - Get IPFS CID for an address
+- `getDIDRoutingInfo(address)` - Get both DID and IPFS CID
+- Events: `IPFSMetadataStored`, `IPFSMetadataUpdated`
+
+### Extensibility
+
+The IPFS integration is designed for future features:
+
+```javascript
+// Generic storage interface
+import { ipfsStorage } from './utils/ipfs';
+
+// Social graph
+await ipfsStorage.store('social-graph', socialGraphData);
+
+// Reputation system
+await ipfsStorage.store('reputation', reputationData);
+
+// Retrieve typed data
+const result = await ipfsStorage.retrieve(cid);
+// Returns: { dataType, data, timestamp, cid }
+```
+
+### Usage Example
+
+```javascript
+// 1. Upload extended metadata to IPFS
+const extendedMetadata = {
+  name: "Alice",
+  interests: ["DeFi", "NFTs"],
+  projects: [...]
+};
+
+const { cid } = await ipfsStore.uploadMetadata(extendedMetadata);
+
+// 2. Store CID on-chain when claiming address
+await contract.claimAddress(
+  address, signature, name, avatar, bio,
+  website, twitter, github, publicKey, isPrivate,
+  cid  // IPFS CID
+);
+
+// 3. Later, retrieve full profile
+const [did, ipfsCID] = await contract.getDIDRoutingInfo(address);
+const { metadata } = await ipfsStore.retrieveMetadata(ipfsCID);
+```
+
+### Documentation
+
+For complete IPFS integration documentation, see [docs/IPFS_INTEGRATION.md](./docs/IPFS_INTEGRATION.md), which includes:
+
+- Complete API reference
+- DID routing system details
+- Smart contract integration
+- Extensibility patterns
+- Pinning service integration
+- Security considerations
+- Performance optimization
+
 ## Roadmap
 
 - [x] Multi-chain support (Polygon, BSC, Arbitrum, etc.) - **COMPLETED**
@@ -457,10 +547,16 @@ The did:ethr method is widely supported in the decentralized identity ecosystem,
   - DID Document management
   - Service endpoint registration
   - Alternative identifier linking
+- [x] IPFS metadata storage - **COMPLETED**
+  - Decentralized content storage with Helia
+  - DID-based IPFS routing for content discovery
+  - Hybrid on-chain + IPFS storage model
+  - Pin management and gateway fallback
+  - Extensible storage interface for future features
+  - See [docs/IPFS_INTEGRATION.md](./docs/IPFS_INTEGRATION.md) for details
 - [ ] ENS integration
-- [ ] IPFS metadata storage
-- [ ] Social graph features
-- [ ] Reputation system
+- [ ] Social graph features (IPFS-ready)
+- [ ] Reputation system (IPFS-ready)
 - [ ] Verifiable credentials issuance
 - [ ] Mobile app
 - [ ] Browser extension
