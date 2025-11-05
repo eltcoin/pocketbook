@@ -331,6 +331,120 @@ const polygonContract = multiChainStore.getChainContract(137);
 const claim = await polygonContract.getClaim('0xYourAddress');
 ```
 
+## DID (Decentralized Identifier) Support
+
+Pocketbook now supports W3C-compliant Decentralized Identifiers (DIDs) following the **did:ethr** method specification.
+
+### What are DIDs?
+
+DIDs are a new type of identifier that enables verifiable, self-sovereign digital identity. A DID identifies any subject (e.g., a person, organization, thing, data model, abstract entity, etc.) that the controller of the DID decides to identify.
+
+### DID Format
+
+Each claimed address in Pocketbook automatically receives a DID:
+
+```
+did:ethr:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1
+```
+
+Format: `did:ethr:<ethereum-address>`
+
+### DID Document
+
+Every claimed address has an associated DID Document containing:
+
+- **DID identifier** - The unique DID string
+- **Controller** - The address that controls this DID
+- **Public Keys** - Verification keys for authentication
+- **Service Endpoints** - Endpoints for services (messaging, profile, etc.)
+- **Alternative Identifiers** - Other identifiers (ENS names, other DIDs)
+- **Timestamps** - Creation and last update times
+
+### DID Functions
+
+#### Resolve a DID to Address
+
+```javascript
+const address = await contract.resolveDID("did:ethr:0x...");
+```
+
+#### Get DID Document
+
+```javascript
+const [did, controller, created, updated] = await contract.getDIDDocument(address);
+```
+
+#### Get Public Keys
+
+```javascript
+const publicKeys = await contract.getDIDPublicKeys(address);
+```
+
+#### Add Service Endpoint
+
+```javascript
+// Add a messaging service
+await contract.addServiceEndpoint(
+  "messaging",           // Service ID
+  "MessagingService",    // Service type
+  "https://msg.example.com/inbox"  // Endpoint URL
+);
+```
+
+#### Get Service Endpoints
+
+```javascript
+const [ids, types, endpoints] = await contract.getServiceEndpoints(address);
+```
+
+#### Add Alternative Identifier
+
+```javascript
+// Link an ENS name
+await contract.addAlsoKnownAs("alice.eth");
+
+// Link another DID
+await contract.addAlsoKnownAs("did:key:z6Mk...");
+```
+
+### Benefits of DID Support
+
+1. **Self-Sovereign Identity** - You control your identity without intermediaries
+2. **Interoperability** - Works across different blockchain platforms and applications
+3. **Verifiable Credentials** - Enables issuing and verifying credentials
+4. **Privacy-Preserving** - Selective disclosure of information
+5. **Standards-Based** - Compliant with W3C DID specification
+
+### Use Cases
+
+- **Cross-Platform Identity** - Use the same DID across multiple dApps
+- **Verifiable Claims** - Issue and verify credentials about the DID
+- **Service Discovery** - Link to messaging, profile, or other services
+- **Identity Aggregation** - Connect multiple identifiers (ENS, other DIDs)
+- **Authentication** - Prove control of the DID cryptographically
+
+### DID Resolution
+
+DIDs can be resolved to retrieve the associated address and DID Document:
+
+```javascript
+// Resolve DID to address
+const address = await contract.resolveDID("did:ethr:0x...");
+
+// Get full DID Document
+const doc = await contract.getDIDDocument(address);
+```
+
+### Integration with Other Systems
+
+The did:ethr method is widely supported in the decentralized identity ecosystem, including:
+
+- **uPort** - Mobile self-sovereign identity
+- **Veramo** - DID and verifiable credentials framework
+- **Ceramic Network** - Decentralized data network
+- **3Box** - Distributed user data network
+- **Sovrin** - Self-sovereign identity network
+
 ## Roadmap
 
 - [x] Multi-chain support (Polygon, BSC, Arbitrum, etc.) - **COMPLETED**
@@ -338,11 +452,16 @@ const claim = await polygonContract.getClaim('0xYourAddress');
   - Cross-chain claim viewing
   - Network switching with MetaMask
   - Support for 6 mainnets and 2 testnets
+- [x] DID (Decentralized Identifier) support - **COMPLETED**
+  - W3C compliant did:ethr identifiers
+  - DID Document management
+  - Service endpoint registration
+  - Alternative identifier linking
 - [ ] ENS integration
 - [ ] IPFS metadata storage
 - [ ] Social graph features
 - [ ] Reputation system
-- [ ] DID (Decentralized Identifier) support
+- [ ] Verifiable credentials issuance
 - [ ] Mobile app
 - [ ] Browser extension
 

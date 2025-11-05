@@ -5,6 +5,7 @@ pragma solidity ^0.8.0;
  * @title AddressClaim
  * @dev Decentralized identity and metadata management for Ethereum addresses
  * Users can claim addresses and attach signed metadata
+ * Supports W3C DID (Decentralized Identifier) standard with did:ethr method
  */
 contract AddressClaim {
     
@@ -21,12 +22,31 @@ contract AddressClaim {
         address[] allowedViewers; // Whitelist for private metadata
     }
     
+    struct ServiceEndpoint {
+        string id;           // Service ID (e.g., "messaging", "profile")
+        string serviceType;  // Service type (e.g., "MessagingService", "IdentityHub")
+        string endpoint;     // Service endpoint URL or address
+        bool isActive;
+    }
+    
+    struct DIDDocument {
+        string did;                      // DID identifier (e.g., "did:ethr:0x...")
+        string[] context;                // JSON-LD context
+        address controller;              // DID controller (owner)
+        bytes[] publicKeys;              // Array of public keys for verification
+        string[] alsoKnownAs;           // Alternative identifiers
+        ServiceEndpoint[] serviceEndpoints;
+        uint256 created;
+        uint256 updated;
+    }
+    
     struct Claim {
         address claimant;
         bytes signature;
         Metadata metadata;
         uint256 claimTime;
         bool isActive;
+        DIDDocument didDocument;  // DID Document for this claim
     }
     
     // Mapping from address to claim
@@ -35,12 +55,19 @@ contract AddressClaim {
     // Mapping to track if address is claimed
     mapping(address => bool) public isClaimed;
     
+    // Mapping from DID string to address (for DID resolution)
+    mapping(string => address) public didToAddress;
+    
     // Events
     event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp);
     event MetadataUpdated(address indexed claimedAddress, uint256 timestamp);
     event ClaimRevoked(address indexed claimedAddress, uint256 timestamp);
     event ViewerAdded(address indexed claimedAddress, address indexed viewer);
     event ViewerRemoved(address indexed claimedAddress, address indexed viewer);
+    event DIDCreated(address indexed claimedAddress, string did, uint256 timestamp);
+    event DIDUpdated(address indexed claimedAddress, string did, uint256 timestamp);
+    event ServiceEndpointAdded(address indexed claimedAddress, string serviceId, uint256 timestamp);
+    event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp);
     
     /**
      * @dev Claim an address with signed metadata
@@ -71,30 +98,55 @@ contract AddressClaim {
         require(!isClaimed[_address], "Address already claimed");
         require(bytes(_name).length > 0, "Name cannot be empty");
         
-        Metadata memory metadata = Metadata({
-            name: _name,
-            avatar: _avatar,
-            bio: _bio,
-            website: _website,
-            twitter: _twitter,
-            github: _github,
-            publicKey: _publicKey,
-            timestamp: block.timestamp,
-            isPrivate: _isPrivate,
-            allowedViewers: new address[](0)
-        });
+        // Create claim storage reference
+        Claim storage newClaim = claims[_address];
+        newClaim.claimant = msg.sender;
+        newClaim.signature = _signature;
+        newClaim.claimTime = block.timestamp;
+        newClaim.isActive = true;
         
-        claims[_address] = Claim({
-            claimant: msg.sender,
-            signature: _signature,
-            metadata: metadata,
-            claimTime: block.timestamp,
-            isActive: true
-        });
+        // Initialize metadata
+        newClaim.metadata.name = _name;
+        newClaim.metadata.avatar = _avatar;
+        newClaim.metadata.bio = _bio;
+        newClaim.metadata.website = _website;
+        newClaim.metadata.twitter = _twitter;
+        newClaim.metadata.github = _github;
+        newClaim.metadata.publicKey = _publicKey;
+        newClaim.metadata.timestamp = block.timestamp;
+        newClaim.metadata.isPrivate = _isPrivate;
+        
+        // Initialize DID Document
+        string memory did = string(abi.encodePacked("did:ethr:", toHexString(_address)));
+        _initializeDIDDocument(_address, did, _publicKey);
         
         isClaimed[_address] = true;
+        didToAddress[did] = _address;
         
         emit AddressClaimed(_address, msg.sender, block.timestamp);
+        emit DIDCreated(_address, did, block.timestamp);
+    }
+    
+    /**
+     * @dev Internal function to initialize DID Document
+     */
+    function _initializeDIDDocument(
+        address _address,
+        string memory _did,
+        bytes memory _publicKey
+    ) internal {
+        DIDDocument storage doc = claims[_address].didDocument;
+        doc.did = _did;
+        doc.controller = msg.sender;
+        doc.created = block.timestamp;
+        doc.updated = block.timestamp;
+        
+        // Add context
+        doc.context.push("https://www.w3.org/ns/did/v1");
+        doc.context.push("https://w3id.org/security/suites/secp256k1recovery-2020/v2");
+        
+        // Add public key
+        doc.publicKeys.push(_publicKey);
     }
     
     /**
@@ -276,6 +328,202 @@ contract AddressClaim {
         // Normalize v value to 27 or 28 for Ethereum signatures
         if (v < 27) {
             v += 27;
+        }
+    }
+    
+    /**
+     * @dev Resolve a DID to its corresponding address
+     * @param _did The DID to resolve (e.g., "did:ethr:0x...")
+     * @return The address associated with the DID
+     */
+    function resolveDID(string memory _did) public view returns (address) {
+        address resolvedAddress = didToAddress[_did];
+        require(resolvedAddress != address(0), "DID not found");
+        return resolvedAddress;
+    }
+    
+    /**
+     * @dev Get DID Document for an address
+     * @param _address The address to get DID Document for
+     * @return did The DID identifier
+     * @return controller The DID controller
+     * @return created Creation timestamp
+     * @return updated Last update timestamp
+     */
+    function getDIDDocument(address _address) public view returns (
+        string memory did,
+        address controller,
+        uint256 created,
+        uint256 updated
+    ) {
+        require(isClaimed[_address], "Address not claimed");
+        
+        DIDDocument storage doc = claims[_address].didDocument;
+        return (doc.did, doc.controller, doc.created, doc.updated);
+    }
+    
+    /**
+     * @dev Get public keys from DID Document
+     * @param _address The address to get public keys for
+     * @return Array of public keys
+     */
+    function getDIDPublicKeys(address _address) public view returns (bytes[] memory) {
+        require(isClaimed[_address], "Address not claimed");
+        return claims[_address].didDocument.publicKeys;
+    }
+    
+    /**
+     * @dev Add a service endpoint to DID Document
+     * @param _serviceId Service identifier
+     * @param _serviceType Type of service
+     * @param _endpoint Service endpoint URL
+     */
+    function addServiceEndpoint(
+        string memory _serviceId,
+        string memory _serviceType,
+        string memory _endpoint
+    ) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
+        
+        ServiceEndpoint memory newService = ServiceEndpoint({
+            id: _serviceId,
+            serviceType: _serviceType,
+            endpoint: _endpoint,
+            isActive: true
+        });
+        
+        claims[msg.sender].didDocument.serviceEndpoints.push(newService);
+        claims[msg.sender].didDocument.updated = block.timestamp;
+        
+        emit ServiceEndpointAdded(msg.sender, _serviceId, block.timestamp);
+        emit DIDUpdated(msg.sender, claims[msg.sender].didDocument.did, block.timestamp);
+    }
+    
+    /**
+     * @dev Remove a service endpoint from DID Document
+     * @param _serviceId Service identifier to remove
+     */
+    function removeServiceEndpoint(string memory _serviceId) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
+        
+        ServiceEndpoint[] storage endpoints = claims[msg.sender].didDocument.serviceEndpoints;
+        bool found = false;
+        
+        for (uint i = 0; i < endpoints.length; i++) {
+            if (keccak256(bytes(endpoints[i].id)) == keccak256(bytes(_serviceId))) {
+                // Move last element to current position and remove last
+                endpoints[i] = endpoints[endpoints.length - 1];
+                endpoints.pop();
+                found = true;
+                break;
+            }
+        }
+        
+        require(found, "Service endpoint not found");
+        claims[msg.sender].didDocument.updated = block.timestamp;
+        
+        emit ServiceEndpointRemoved(msg.sender, _serviceId, block.timestamp);
+        emit DIDUpdated(msg.sender, claims[msg.sender].didDocument.did, block.timestamp);
+    }
+    
+    /**
+     * @dev Get service endpoints for an address
+     * @param _address The address to get service endpoints for
+     * @return ids Array of service endpoint IDs
+     * @return types Array of service types
+     * @return endpoints Array of service endpoint URLs
+     */
+    function getServiceEndpoints(address _address) public view returns (
+        string[] memory ids,
+        string[] memory types,
+        string[] memory endpoints
+    ) {
+        require(isClaimed[_address], "Address not claimed");
+        
+        ServiceEndpoint[] storage services = claims[_address].didDocument.serviceEndpoints;
+        uint activeCount = 0;
+        
+        // Count active services
+        for (uint i = 0; i < services.length; i++) {
+            if (services[i].isActive) {
+                activeCount++;
+            }
+        }
+        
+        // Create arrays
+        ids = new string[](activeCount);
+        types = new string[](activeCount);
+        endpoints = new string[](activeCount);
+        
+        // Populate arrays
+        uint index = 0;
+        for (uint i = 0; i < services.length; i++) {
+            if (services[i].isActive) {
+                ids[index] = services[i].id;
+                types[index] = services[i].serviceType;
+                endpoints[index] = services[i].endpoint;
+                index++;
+            }
+        }
+        
+        return (ids, types, endpoints);
+    }
+    
+    /**
+     * @dev Add an alternative identifier (alsoKnownAs) to DID Document
+     * @param _identifier Alternative identifier (e.g., ENS name, other DID)
+     */
+    function addAlsoKnownAs(string memory _identifier) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
+        
+        claims[msg.sender].didDocument.alsoKnownAs.push(_identifier);
+        claims[msg.sender].didDocument.updated = block.timestamp;
+        
+        emit DIDUpdated(msg.sender, claims[msg.sender].didDocument.did, block.timestamp);
+    }
+    
+    /**
+     * @dev Get alternative identifiers for an address
+     * @param _address The address to get alternative identifiers for
+     * @return Array of alternative identifiers
+     */
+    function getAlsoKnownAs(address _address) public view returns (string[] memory) {
+        require(isClaimed[_address], "Address not claimed");
+        return claims[_address].didDocument.alsoKnownAs;
+    }
+    
+    /**
+     * @dev Convert address to hex string (for DID construction)
+     * @param _address Address to convert
+     * @return Hex string representation
+     */
+    function toHexString(address _address) internal pure returns (string memory) {
+        bytes memory buffer = new bytes(42);
+        buffer[0] = '0';
+        buffer[1] = 'x';
+        
+        for (uint i = 0; i < 20; i++) {
+            uint8 value = uint8(uint160(_address) >> (8 * (19 - i)));
+            buffer[2 + i * 2] = getHexChar(value / 16);
+            buffer[3 + i * 2] = getHexChar(value % 16);
+        }
+        
+        return string(buffer);
+    }
+    
+    /**
+     * @dev Get hex character for value
+     * @param _value Value to convert (0-15)
+     * @return Hex character
+     */
+    function getHexChar(uint8 _value) internal pure returns (bytes1) {
+        if (_value < 10) {
+            return bytes1(uint8(48 + _value)); // '0'-'9'
+        } else {
+            return bytes1(uint8(87 + _value)); // 'a'-'f'
         }
     }
 }
