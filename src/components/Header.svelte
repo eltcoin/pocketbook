@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { ethersStore } from '../stores/ethers';
   import { themeStore } from '../stores/theme';
+  import NetworkSelector from './NetworkSelector.svelte';
 
   const dispatch = createEventDispatcher();
   
@@ -67,6 +68,7 @@
       </button>
       
       {#if connected}
+        <NetworkSelector />
         <div class="wallet-info">
           <span class="address">{shortenAddress(address)}</span>
           <button class="btn-disconnect" on:click={handleDisconnect}>
