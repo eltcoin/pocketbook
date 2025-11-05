@@ -11,6 +11,7 @@
 
   let currentView = 'explorer'; // 'explorer', 'claim', 'address', 'admin'
   let selectedAddress = null;
+  let selectedENSName = null;
   let darkMode = false;
 
   themeStore.subscribe(value => {
@@ -21,6 +22,7 @@
     currentView = event.detail.view;
     if (event.detail.address) {
       selectedAddress = event.detail.address;
+      selectedENSName = event.detail.ensName || null;
     }
   }
 </script>
@@ -34,7 +36,7 @@
     {:else if currentView === 'claim'}
       <AddressClaim on:viewChange={handleViewChange} />
     {:else if currentView === 'address' && selectedAddress}
-      <AddressView address={selectedAddress} on:viewChange={handleViewChange} />
+      <AddressView address={selectedAddress} ensName={selectedENSName} on:viewChange={handleViewChange} />
     {:else if currentView === 'admin'}
       <AdminPanel on:viewChange={handleViewChange} />
     {/if}

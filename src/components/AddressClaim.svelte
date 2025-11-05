@@ -1,7 +1,8 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import { lookupENSName } from '../utils/ens';
 
   const dispatch = createEventDispatcher();
 
@@ -11,6 +12,8 @@
   let loading = false;
   let success = false;
   let error = null;
+  let ensName = null;
+  let provider = null;
 
   // Form data
   let formData = {
@@ -27,9 +30,23 @@
     darkMode = value.darkMode;
   });
 
-  multiChainStore.subscribe(value => {
+  multiChainStore.subscribe(async value => {
     connected = value.connected;
-    address = value.primaryAddress;
+    const newAddress = value.primaryAddress;
+    provider = value.providers?.[value.primaryChainId] || null;
+    
+    // If address changed and we have a provider, lookup ENS name
+    if (newAddress !== address) {
+      address = newAddress;
+      if (address && provider) {
+        try {
+          ensName = await lookupENSName(address, provider);
+        } catch (err) {
+          console.error('Error looking up ENS name:', err);
+          ensName = null;
+        }
+      }
+    }
   });
 
   async function handleClaim() {
@@ -95,6 +112,12 @@
       <div class="current-address">
         <label>Your Address:</label>
         <div class="address-display">{address}</div>
+        {#if ensName}
+          <div class="ens-info">
+            <span class="ens-icon">🏷️</span>
+            <span class="ens-text">ENS Name: <strong>{ensName}</strong></span>
+          </div>
+        {/if}
       </div>
 
       <div class="form-group">
@@ -313,6 +336,35 @@
 
   .claim-container.dark .address-display {
     color: #a78bfa;
+  }
+
+  .ens-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    color: #8b5cf6;
+    font-size: 0.95rem;
+  }
+
+  .claim-container.dark .ens-info {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .ens-icon {
+    font-size: 1.1rem;
+  }
+
+  .ens-text {
+    flex: 1;
+  }
+
+  .ens-text strong {
+    font-family: 'Courier New', monospace;
   }
 
   .form-group {
