@@ -16,13 +16,16 @@ function createEthersStore() {
 
   // Contract ABI (simplified for now)
   const contractABI = [
-    "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate) public",
-    "function updateMetadata(string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate) public",
+    "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate, string memory _ipfsCID) public",
+    "function updateMetadata(string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate, string memory _ipfsCID) public",
     "function getClaim(address _address) public view returns (address claimant, string memory name, string memory avatar, string memory bio, string memory website, string memory twitter, string memory github, uint256 claimTime, bool isActive, bool isPrivate)",
     "function isClaimed(address) public view returns (bool)",
     "function addViewer(address _viewer) public",
     "function removeViewer(address _viewer) public",
     "function revokeClaim() public",
+    // IPFS-related functions
+    "function getIPFSCID(address _address) public view returns (string memory)",
+    "function getDIDRoutingInfo(address _address) public view returns (string memory did, string memory ipfsCID)",
     // DID-related functions
     "function resolveDID(string memory _did) public view returns (address)",
     "function getDIDDocument(address _address) public view returns (string memory did, address controller, uint256 created, uint256 updated)",
@@ -37,7 +40,9 @@ function createEthersStore() {
     "event DIDCreated(address indexed claimedAddress, string did, uint256 timestamp)",
     "event DIDUpdated(address indexed claimedAddress, string did, uint256 timestamp)",
     "event ServiceEndpointAdded(address indexed claimedAddress, string serviceId, uint256 timestamp)",
-    "event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp)"
+    "event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp)",
+    "event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
+    "event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp)"
   ];
 
   // Store reference to account and network change handlers to prevent memory leaks

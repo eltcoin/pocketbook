@@ -21,6 +21,9 @@
     "vite": "^7.1.12"
   },
   "dependencies": {
-    "ethers": "^6.15.0"
+    "@helia/json": "^5.0.3",
+    "@helia/unixfs": "^6.0.3",
+    "ethers": "^6.15.0",
+    "helia": "^6.0.8"
   }
 }

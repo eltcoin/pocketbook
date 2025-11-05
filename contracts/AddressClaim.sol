@@ -20,6 +20,7 @@ contract AddressClaim {
         uint256 timestamp;
         bool isPrivate;
         address[] allowedViewers; // Whitelist for private metadata
+        string ipfsCID; // IPFS Content Identifier for extended metadata
     }
     
     struct ServiceEndpoint {
@@ -68,6 +69,8 @@ contract AddressClaim {
     event DIDUpdated(address indexed claimedAddress, string did, uint256 timestamp);
     event ServiceEndpointAdded(address indexed claimedAddress, string serviceId, uint256 timestamp);
     event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp);
+    event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp);
+    event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp);
     
     /**
      * @dev Claim an address with signed metadata
@@ -81,6 +84,7 @@ contract AddressClaim {
      * @param _github Github username
      * @param _publicKey Public key for encryption
      * @param _isPrivate Whether metadata is private
+     * @param _ipfsCID IPFS Content Identifier for extended metadata (optional)
      */
     function claimAddress(
         address _address,
@@ -92,7 +96,8 @@ contract AddressClaim {
         string memory _twitter,
         string memory _github,
         bytes memory _publicKey,
-        bool _isPrivate
+        bool _isPrivate,
+        string memory _ipfsCID
     ) public {
         require(_address == msg.sender, "Can only claim your own address");
         require(!isClaimed[_address], "Address already claimed");
@@ -115,6 +120,7 @@ contract AddressClaim {
         newClaim.metadata.publicKey = _publicKey;
         newClaim.metadata.timestamp = block.timestamp;
         newClaim.metadata.isPrivate = _isPrivate;
+        newClaim.metadata.ipfsCID = _ipfsCID;
         
         // Initialize DID Document
         string memory did = string(abi.encodePacked("did:ethr:", toHexString(_address)));
@@ -125,6 +131,12 @@ contract AddressClaim {
         
         emit AddressClaimed(_address, msg.sender, block.timestamp);
         emit DIDCreated(_address, did, block.timestamp);
+        
+        // Emit IPFS event if CID is provided
+        if (bytes(_ipfsCID).length > 0) {
+            emit IPFSMetadataStored(_address, _ipfsCID, block.timestamp);
+        }
+    }
     }
     
     /**
@@ -151,6 +163,7 @@ contract AddressClaim {
     
     /**
      * @dev Update metadata for a claimed address
+     * @param _ipfsCID IPFS Content Identifier for extended metadata (optional)
      */
     function updateMetadata(
         string memory _name,
@@ -160,7 +173,8 @@ contract AddressClaim {
         string memory _twitter,
         string memory _github,
         bytes memory _publicKey,
-        bool _isPrivate
+        bool _isPrivate,
+        string memory _ipfsCID
     ) public {
         require(isClaimed[msg.sender], "Address not claimed");
         require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
@@ -175,8 +189,14 @@ contract AddressClaim {
         claim.metadata.publicKey = _publicKey;
         claim.metadata.timestamp = block.timestamp;
         claim.metadata.isPrivate = _isPrivate;
+        claim.metadata.ipfsCID = _ipfsCID;
         
         emit MetadataUpdated(msg.sender, block.timestamp);
+        
+        // Emit IPFS event if CID is provided
+        if (bytes(_ipfsCID).length > 0) {
+            emit IPFSMetadataUpdated(msg.sender, _ipfsCID, block.timestamp);
+        }
     }
     
     /**
@@ -271,6 +291,57 @@ contract AddressClaim {
             claim.claimTime,
             claim.isActive,
             claim.metadata.isPrivate
+        );
+    }
+    
+    /**
+     * @dev Get IPFS CID for an address's metadata
+     * @param _address Address to get IPFS CID for
+     * @return ipfsCID The IPFS Content Identifier
+     */
+    function getIPFSCID(address _address) public view returns (string memory) {
+        require(isClaimed[_address], "Address not claimed");
+        
+        Claim memory claim = claims[_address];
+        
+        // Check if caller can view private metadata
+        if (claim.metadata.isPrivate) {
+            require(
+                msg.sender == _address || 
+                isAllowedViewer(_address, msg.sender),
+                "Not authorized to view private metadata"
+            );
+        }
+        
+        return claim.metadata.ipfsCID;
+    }
+    
+    /**
+     * @dev Get DID and IPFS CID for routing
+     * @param _address Address to get routing info for
+     * @return did The DID identifier
+     * @return ipfsCID The IPFS Content Identifier
+     */
+    function getDIDRoutingInfo(address _address) public view returns (
+        string memory did,
+        string memory ipfsCID
+    ) {
+        require(isClaimed[_address], "Address not claimed");
+        
+        Claim memory claim = claims[_address];
+        
+        // Check if caller can view private metadata
+        if (claim.metadata.isPrivate) {
+            require(
+                msg.sender == _address || 
+                isAllowedViewer(_address, msg.sender),
+                "Not authorized to view private metadata"
+            );
+        }
+        
+        return (
+            claim.didDocument.did,
+            claim.metadata.ipfsCID
         );
     }
     
