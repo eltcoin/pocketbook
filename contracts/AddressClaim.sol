@@ -17,10 +17,22 @@ contract AddressClaim {
         string twitter;
         string github;
         bytes publicKey;
+        string pgpSignature; // PGP signature for additional verification
         uint256 timestamp;
         bool isPrivate;
         address[] allowedViewers; // Whitelist for private metadata
         string ipfsCID; // IPFS Content Identifier for extended metadata
+    }
+    
+    struct SocialGraph {
+        address[] following;      // Addresses this user follows
+        address[] followers;      // Addresses following this user
+        address[] friends;        // Mutual connections
+        mapping(address => bool) isFollowing;
+        mapping(address => bool) isFollower;
+        mapping(address => bool) isFriend;
+        mapping(address => bool) friendRequestSent;
+        mapping(address => bool) friendRequestReceived;
     }
     
     struct ServiceEndpoint {
@@ -59,6 +71,9 @@ contract AddressClaim {
     // Mapping from DID string to address (for DID resolution)
     mapping(string => address) public didToAddress;
     
+    // Social graph mappings
+    mapping(address => SocialGraph) private socialGraphs;
+    
     // Events
     event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp);
     event MetadataUpdated(address indexed claimedAddress, uint256 timestamp);
@@ -71,6 +86,11 @@ contract AddressClaim {
     event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp);
     event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp);
     event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp);
+    event UserFollowed(address indexed follower, address indexed followee, uint256 timestamp);
+    event UserUnfollowed(address indexed follower, address indexed followee, uint256 timestamp);
+    event FriendRequestSent(address indexed from, address indexed to, uint256 timestamp);
+    event FriendRequestAccepted(address indexed from, address indexed to, uint256 timestamp);
+    event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp);
     
     /**
      * @dev Claim an address with signed metadata
@@ -83,6 +103,7 @@ contract AddressClaim {
      * @param _twitter Twitter handle
      * @param _github Github username
      * @param _publicKey Public key for encryption
+     * @param _pgpSignature PGP signature for additional verification
      * @param _isPrivate Whether metadata is private
      * @param _ipfsCID IPFS Content Identifier for extended metadata (optional)
      */
@@ -96,6 +117,7 @@ contract AddressClaim {
         string memory _twitter,
         string memory _github,
         bytes memory _publicKey,
+        string memory _pgpSignature,
         bool _isPrivate,
         string memory _ipfsCID
     ) public {
@@ -118,6 +140,7 @@ contract AddressClaim {
         newClaim.metadata.twitter = _twitter;
         newClaim.metadata.github = _github;
         newClaim.metadata.publicKey = _publicKey;
+        newClaim.metadata.pgpSignature = _pgpSignature;
         newClaim.metadata.timestamp = block.timestamp;
         newClaim.metadata.isPrivate = _isPrivate;
         newClaim.metadata.ipfsCID = _ipfsCID;
@@ -173,6 +196,7 @@ contract AddressClaim {
         string memory _twitter,
         string memory _github,
         bytes memory _publicKey,
+        string memory _pgpSignature,
         bool _isPrivate,
         string memory _ipfsCID
     ) public {
@@ -187,6 +211,7 @@ contract AddressClaim {
         claim.metadata.twitter = _twitter;
         claim.metadata.github = _github;
         claim.metadata.publicKey = _publicKey;
+        claim.metadata.pgpSignature = _pgpSignature;
         claim.metadata.timestamp = block.timestamp;
         claim.metadata.isPrivate = _isPrivate;
         claim.metadata.ipfsCID = _ipfsCID;
@@ -292,6 +317,28 @@ contract AddressClaim {
             claim.isActive,
             claim.metadata.isPrivate
         );
+    }
+    
+    /**
+     * @dev Get PGP signature for an address
+     * @param _address Address to get PGP signature for
+     * @return pgpSignature The PGP signature
+     */
+    function getPGPSignature(address _address) public view returns (string memory) {
+        require(isClaimed[_address], "Address not claimed");
+        
+        Claim memory claim = claims[_address];
+        
+        // Check if caller can view private metadata
+        if (claim.metadata.isPrivate) {
+            require(
+                msg.sender == _address || 
+                isAllowedViewer(_address, msg.sender),
+                "Not authorized to view private metadata"
+            );
+        }
+        
+        return claim.metadata.pgpSignature;
     }
     
     /**
@@ -596,5 +643,163 @@ contract AddressClaim {
         } else {
             return bytes1(uint8(87 + _value)); // 'a'-'f'
         }
+    }
+    
+    // ============ Social Graph Functions ============
+    
+    /**
+     * @dev Follow another user
+     * @param _userToFollow Address to follow
+     */
+    function followUser(address _userToFollow) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(isClaimed[_userToFollow], "Target address not claimed");
+        require(msg.sender != _userToFollow, "Cannot follow yourself");
+        require(!socialGraphs[msg.sender].isFollowing[_userToFollow], "Already following");
+        
+        // Add to follower's following list
+        socialGraphs[msg.sender].following.push(_userToFollow);
+        socialGraphs[msg.sender].isFollowing[_userToFollow] = true;
+        
+        // Add to followee's followers list
+        socialGraphs[_userToFollow].followers.push(msg.sender);
+        socialGraphs[_userToFollow].isFollower[msg.sender] = true;
+        
+        emit UserFollowed(msg.sender, _userToFollow, block.timestamp);
+    }
+    
+    /**
+     * @dev Unfollow a user
+     * @param _userToUnfollow Address to unfollow
+     */
+    function unfollowUser(address _userToUnfollow) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(socialGraphs[msg.sender].isFollowing[_userToUnfollow], "Not following this user");
+        
+        // Remove from follower's following list
+        _removeFromArray(socialGraphs[msg.sender].following, _userToUnfollow);
+        socialGraphs[msg.sender].isFollowing[_userToUnfollow] = false;
+        
+        // Remove from followee's followers list
+        _removeFromArray(socialGraphs[_userToUnfollow].followers, msg.sender);
+        socialGraphs[_userToUnfollow].isFollower[msg.sender] = false;
+        
+        emit UserUnfollowed(msg.sender, _userToUnfollow, block.timestamp);
+    }
+    
+    /**
+     * @dev Send a friend request
+     * @param _to Address to send friend request to
+     */
+    function sendFriendRequest(address _to) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(isClaimed[_to], "Target address not claimed");
+        require(msg.sender != _to, "Cannot send friend request to yourself");
+        require(!socialGraphs[msg.sender].isFriend[_to], "Already friends");
+        require(!socialGraphs[msg.sender].friendRequestSent[_to], "Friend request already sent");
+        require(!socialGraphs[_to].friendRequestSent[msg.sender], "Friend request already received");
+        
+        socialGraphs[msg.sender].friendRequestSent[_to] = true;
+        socialGraphs[_to].friendRequestReceived[msg.sender] = true;
+        
+        emit FriendRequestSent(msg.sender, _to, block.timestamp);
+    }
+    
+    /**
+     * @dev Accept a friend request
+     * @param _from Address that sent the friend request
+     */
+    function acceptFriendRequest(address _from) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(socialGraphs[msg.sender].friendRequestReceived[_from], "No friend request from this user");
+        require(!socialGraphs[msg.sender].isFriend[_from], "Already friends");
+        
+        // Clear friend request flags
+        socialGraphs[msg.sender].friendRequestReceived[_from] = false;
+        socialGraphs[_from].friendRequestSent[msg.sender] = false;
+        
+        // Add to friends lists
+        socialGraphs[msg.sender].friends.push(_from);
+        socialGraphs[msg.sender].isFriend[_from] = true;
+        
+        socialGraphs[_from].friends.push(msg.sender);
+        socialGraphs[_from].isFriend[msg.sender] = true;
+        
+        emit FriendRequestAccepted(msg.sender, _from, block.timestamp);
+    }
+    
+    /**
+     * @dev Remove a friend
+     * @param _friend Address to remove from friends
+     */
+    function removeFriend(address _friend) public {
+        require(isClaimed[msg.sender], "Address not claimed");
+        require(socialGraphs[msg.sender].isFriend[_friend], "Not friends with this user");
+        
+        // Remove from user's friends list
+        _removeFromArray(socialGraphs[msg.sender].friends, _friend);
+        socialGraphs[msg.sender].isFriend[_friend] = false;
+        
+        // Remove from friend's friends list
+        _removeFromArray(socialGraphs[_friend].friends, msg.sender);
+        socialGraphs[_friend].isFriend[msg.sender] = false;
+        
+        emit FriendRemoved(msg.sender, _friend, block.timestamp);
+    }
+    
+    /**
+     * @dev Get social graph data for an address
+     * @param _address Address to get social graph for
+     * @return following Array of addresses being followed
+     * @return followers Array of follower addresses
+     * @return friends Array of friend addresses
+     */
+    function getSocialGraph(address _address) public view returns (
+        address[] memory following,
+        address[] memory followers,
+        address[] memory friends
+    ) {
+        require(isClaimed[_address], "Address not claimed");
+        return (
+            socialGraphs[_address].following,
+            socialGraphs[_address].followers,
+            socialGraphs[_address].friends
+        );
+    }
+    
+    /**
+     * @dev Check if user1 is following user2
+     */
+    function isFollowing(address _user1, address _user2) public view returns (bool) {
+        return socialGraphs[_user1].isFollowing[_user2];
+    }
+    
+    /**
+     * @dev Check if two users are friends
+     */
+    function areFriends(address _user1, address _user2) public view returns (bool) {
+        return socialGraphs[_user1].isFriend[_user2];
+    }
+    
+    /**
+     * @dev Check if there's a pending friend request from user1 to user2
+     */
+    function hasPendingFriendRequest(address _from, address _to) public view returns (bool) {
+        return socialGraphs[_from].friendRequestSent[_to];
+    }
+    
+    /**
+     * @dev Internal helper to remove address from array
+     * @return success True if element was found and removed
+     */
+    function _removeFromArray(address[] storage array, address element) internal returns (bool) {
+        for (uint i = 0; i < array.length; i++) {
+            if (array[i] == element) {
+                array[i] = array[array.length - 1];
+                array.pop();
+                return true;
+            }
+        }
+        return false;
     }
 }

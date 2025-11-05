@@ -16,8 +16,8 @@ function createEthersStore() {
 
   // Contract ABI (simplified for now)
   const contractABI = [
-    "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate, string memory _ipfsCID) public",
-    "function updateMetadata(string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate, string memory _ipfsCID) public",
+    "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, string memory _pgpSignature, bool _isPrivate, string memory _ipfsCID) public",
+    "function updateMetadata(string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, string memory _pgpSignature, bool _isPrivate, string memory _ipfsCID) public",
     "function getClaim(address _address) public view returns (address claimant, string memory name, string memory avatar, string memory bio, string memory website, string memory twitter, string memory github, uint256 claimTime, bool isActive, bool isPrivate)",
     "function isClaimed(address) public view returns (bool)",
     "function addViewer(address _viewer) public",
@@ -25,6 +25,7 @@ function createEthersStore() {
     "function revokeClaim() public",
     // IPFS-related functions
     "function getIPFSCID(address _address) public view returns (string memory)",
+    "function getPGPSignature(address _address) public view returns (string memory)",
     "function getDIDRoutingInfo(address _address) public view returns (string memory did, string memory ipfsCID)",
     // DID-related functions
     "function resolveDID(string memory _did) public view returns (address)",
@@ -35,6 +36,16 @@ function createEthersStore() {
     "function getServiceEndpoints(address _address) public view returns (string[] memory ids, string[] memory types, string[] memory endpoints)",
     "function addAlsoKnownAs(string memory _identifier) public",
     "function getAlsoKnownAs(address _address) public view returns (string[] memory)",
+    // Social graph functions
+    "function followUser(address _userToFollow) public",
+    "function unfollowUser(address _userToUnfollow) public",
+    "function sendFriendRequest(address _to) public",
+    "function acceptFriendRequest(address _from) public",
+    "function removeFriend(address _friend) public",
+    "function getSocialGraph(address _address) public view returns (address[] memory following, address[] memory followers, address[] memory friends)",
+    "function isFollowing(address _user1, address _user2) public view returns (bool)",
+    "function areFriends(address _user1, address _user2) public view returns (bool)",
+    "function hasPendingFriendRequest(address _from, address _to) public view returns (bool)",
     "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
     "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)",
     "event DIDCreated(address indexed claimedAddress, string did, uint256 timestamp)",
@@ -42,7 +53,12 @@ function createEthersStore() {
     "event ServiceEndpointAdded(address indexed claimedAddress, string serviceId, uint256 timestamp)",
     "event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp)",
     "event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
-    "event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp)"
+    "event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
+    "event UserFollowed(address indexed follower, address indexed followee, uint256 timestamp)",
+    "event UserUnfollowed(address indexed follower, address indexed followee, uint256 timestamp)",
+    "event FriendRequestSent(address indexed from, address indexed to, uint256 timestamp)",
+    "event FriendRequestAccepted(address indexed from, address indexed to, uint256 timestamp)",
+    "event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp)"
   ];
 
   // Store reference to account and network change handlers to prevent memory leaks

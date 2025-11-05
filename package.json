@@ -23,6 +23,7 @@
   "dependencies": {
     "@helia/json": "^5.0.3",
     "@helia/unixfs": "^6.0.3",
+    "d3": "^7.9.0",
     "ethers": "^6.15.0",
     "helia": "^6.0.8"
   }
