@@ -23,6 +23,7 @@
     website: '',
     twitter: '',
     github: '',
+    pgpSignature: '',
     isPrivate: false
   };
 
@@ -214,6 +215,17 @@
             placeholder="username"
           />
         </div>
+      </div>
+
+      <div class="form-group">
+        <label for="pgpSignature">PGP Signature (Optional)</label>
+        <textarea
+          id="pgpSignature"
+          bind:value={formData.pgpSignature}
+          placeholder="-----BEGIN PGP SIGNATURE-----&#10;...&#10;-----END PGP SIGNATURE-----"
+          rows="6"
+        ></textarea>
+        <small class="form-hint">Add your PGP signature for additional verification</small>
       </div>
 
       <div class="form-group checkbox-group">
@@ -451,6 +463,17 @@
   textarea {
     resize: vertical;
     font-family: inherit;
+  }
+
+  .form-hint {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: #666;
+  }
+
+  .claim-container.dark .form-hint {
+    color: #a0aec0;
   }
 
   .checkbox-group label {

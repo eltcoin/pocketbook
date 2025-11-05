@@ -4,6 +4,7 @@
   import { themeStore } from '../stores/theme';
   import { lookupENSName } from '../utils/ens';
   import MultiChainView from './MultiChainView.svelte';
+  import SocialGraph from './SocialGraph.svelte';
 
   export let address;
   export let ensName = null;
@@ -52,6 +53,7 @@
         website: 'https://alice.eth.link',
         twitter: '@alice_eth',
         github: 'alice-eth',
+        pgpSignature: '-----BEGIN PGP SIGNATURE-----\n\nExample signature...\n-----END PGP SIGNATURE-----',
         claimTime: Date.now() - 86400000,
         isPrivate: false
       };
@@ -182,6 +184,18 @@
           </div>
         </div>
 
+        {#if claimData.pgpSignature}
+          <div class="profile-section pgp-section">
+            <h3>🔑 PGP Signature</h3>
+            <div class="pgp-signature">
+              <pre>{claimData.pgpSignature}</pre>
+            </div>
+            <p class="pgp-description">
+              This PGP signature provides additional cryptographic verification of the user's identity.
+            </p>
+          </div>
+        {/if}
+
         {#if isOwner}
           <div class="owner-actions">
             <button class="btn-action btn-edit">Edit Profile</button>
@@ -189,6 +203,8 @@
           </div>
         {/if}
       </div>
+
+      <SocialGraph {address} {isOwner} on:viewAddress={handleViewChange} />
 
       <MultiChainView {address} />
 
@@ -542,6 +558,55 @@
   .address-view.dark .did-section {
     background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
     border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  .pgp-section {
+    background: rgba(245, 245, 245, 0.5);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid #e0e0e0;
+  }
+
+  .address-view.dark .pgp-section {
+    background: rgba(30, 30, 50, 0.5);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .pgp-signature {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 0.75rem;
+    overflow-x: auto;
+  }
+
+  .address-view.dark .pgp-signature {
+    background: rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .pgp-signature pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    color: #333;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  .address-view.dark .pgp-signature pre {
+    color: #a0aec0;
+  }
+
+  .pgp-description {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0;
+  }
+
+  .address-view.dark .pgp-description {
+    color: #a0aec0;
   }
 
   .did-info {
