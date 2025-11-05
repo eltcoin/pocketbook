@@ -25,6 +25,7 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 - 🎯 **Address Claiming** - Prove ownership and attach verified metadata to any address
 - 🔐 **Cryptographic Security** - All claims signed and verified on-chain
 - 🆔 **DID Support** - W3C compliant Decentralized Identifiers (did:ethr) for self-sovereign identity
+- 🏷️ **ENS Integration** - Use human-readable names (name.eth) instead of addresses with full ENS resolution and reverse lookup
 - 🌐 **Multi-Chain Support** - Simultaneous connectivity to Ethereum, Polygon, BSC, Arbitrum, Optimism, and Avalanche
 - 🔗 **Cross-Chain Identity** - View and manage claims across multiple blockchain networks
 - 🔒 **Privacy Controls** - Choose what's public and whitelist private viewers
@@ -40,6 +41,11 @@ See [DOCUMENTATION.md](./DOCUMENTATION.md) for comprehensive guides on:
 - Frontend development
 - Security best practices
 - Contributing guidelines
+
+See [docs/ENS_INTEGRATION.md](./docs/ENS_INTEGRATION.md) for ENS integration details:
+- ENS name resolution and reverse lookup
+- Supported networks and features
+- API reference and usage examples
 
 ### 🏗️ Tech Stack
 
