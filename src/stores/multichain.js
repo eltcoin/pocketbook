@@ -1,6 +1,9 @@
-import { writable, derived } from 'svelte/store';
+import { writable, derived, get } from 'svelte/store';
 import { ethers } from 'ethers';
 import { getSupportedNetworks, getNetworkByChainId } from '../config/networks';
+
+// Constants
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
 /**
  * Multi-chain store for simultaneous blockchain connections
@@ -48,7 +51,7 @@ function createMultiChainStore() {
     for (const network of networks) {
       try {
         // Only initialize if contract address is configured
-        if (!network.contractAddress || network.contractAddress === "0x0000000000000000000000000000000000000000") {
+        if (!network.contractAddress || network.contractAddress === ZERO_ADDRESS) {
           console.log(`Skipping ${network.name}: No contract address configured`);
           chains[network.chainId] = {
             provider: null,
@@ -102,7 +105,7 @@ function createMultiChainStore() {
     return chains;
   }
 
-  return {
+  const storeMethods = {
     subscribe,
     
     /**
@@ -131,7 +134,7 @@ function createMultiChainStore() {
           const networkConfig = getNetworkByChainId(chainId);
           const contractAddress = networkConfig?.contractAddress;
           
-          if (contractAddress && contractAddress !== "0x0000000000000000000000000000000000000000") {
+          if (contractAddress && contractAddress !== ZERO_ADDRESS) {
             chains[chainId].contract = new ethers.Contract(
               contractAddress,
               contractABI,
@@ -161,16 +164,16 @@ function createMultiChainStore() {
 
         accountsChangedHandler = (accounts) => {
           if (accounts.length === 0) {
-            multiChainStore.disconnect();
+            storeMethods.disconnect();
           } else {
-            multiChainStore.connect();
+            storeMethods.connect();
           }
         };
         window.ethereum.on('accountsChanged', accountsChangedHandler);
 
         chainChangedHandler = () => {
           // Reconnect to update primary chain
-          multiChainStore.connect();
+          storeMethods.connect();
         };
         window.ethereum.on('chainChanged', chainChangedHandler);
 
@@ -265,12 +268,7 @@ function createMultiChainStore() {
      * Get contract instance for a specific chain
      */
     getChainContract: (chainId) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
-
+      const currentStore = get(storeMethods);
       return currentStore.chains[chainId]?.contract || null;
     },
 
@@ -278,12 +276,7 @@ function createMultiChainStore() {
      * Get provider for a specific chain
      */
     getChainProvider: (chainId) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
-
+      const currentStore = get(storeMethods);
       return currentStore.chains[chainId]?.provider || null;
     },
 
@@ -291,11 +284,7 @@ function createMultiChainStore() {
      * Check if a claim exists on a specific chain
      */
     checkClaimOnChain: async (chainId, address) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
+      const currentStore = get(storeMethods);
 
       const chainData = currentStore.chains[chainId];
       if (!chainData || !chainData.contract || !chainData.isAvailable) {
@@ -315,11 +304,7 @@ function createMultiChainStore() {
      * Get claim data from a specific chain
      */
     getClaimFromChain: async (chainId, address) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
+      const currentStore = get(storeMethods);
 
       const chainData = currentStore.chains[chainId];
       if (!chainData || !chainData.contract || !chainData.isAvailable) {
@@ -353,11 +338,7 @@ function createMultiChainStore() {
      * Get claims across all chains for an address
      */
     getClaimsAcrossChains: async (address) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
+      const currentStore = get(storeMethods);
 
       const results = [];
 
@@ -397,11 +378,7 @@ function createMultiChainStore() {
      * Sign message with primary signer
      */
     signMessage: async (message) => {
-      let currentStore;
-      const unsubscribe = subscribe(val => {
-        currentStore = val;
-      });
-      unsubscribe();
+      const currentStore = get(storeMethods);
 
       if (!currentStore.primarySigner) {
         throw new Error('No signer available');
@@ -410,6 +387,8 @@ function createMultiChainStore() {
       return await currentStore.primarySigner.signMessage(message);
     }
   };
+  
+  return storeMethods;
 }
 
 export const multiChainStore = createMultiChainStore();

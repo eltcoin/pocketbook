@@ -92,8 +92,8 @@ function createEthersStore() {
 
           // Listen for chain/network changes
           chainChangedHandler = () => {
-            // Reload the page on network change as recommended by MetaMask
-            window.location.reload();
+            // Reconnect to update network info
+            ethersStore.connect();
           };
           window.ethereum.on('chainChanged', chainChangedHandler);
 

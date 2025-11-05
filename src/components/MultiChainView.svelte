@@ -10,6 +10,7 @@
   let chainClaims = [];
   let connected = false;
   let availableChainsList = [];
+  let lastLoadedAddress = null;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -31,6 +32,7 @@
 
   async function loadClaimsAcrossChains() {
     loading = true;
+    lastLoadedAddress = address;
     try {
       const claims = await multiChainStore.getClaimsAcrossChains(address);
       chainClaims = claims;
@@ -41,7 +43,8 @@
     }
   }
 
-  $: if (connected && address) {
+  // Only reload if connected, address exists, and it's different from the last loaded address
+  $: if (connected && address && address !== lastLoadedAddress) {
     loadClaimsAcrossChains();
   }
 </script>

@@ -37,6 +37,8 @@
   async function handleNetworkSwitch(network) {
     const result = await multiChainStore.switchNetwork(network.chainId);
     if (!result.success) {
+      console.error('Failed to switch network:', result.error);
+      // TODO: Replace with proper notification system
       alert(`Failed to switch network: ${result.error}`);
     }
     closeDropdown();
