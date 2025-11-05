@@ -16,6 +16,7 @@
   "license": "MIT",
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
+    "solc": "^0.8.0",
     "svelte": "^5.43.3",
     "vite": "^7.1.12"
   },
