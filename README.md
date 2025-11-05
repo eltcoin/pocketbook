@@ -33,6 +33,8 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 - 🌓 **Dark Mode** - Beautiful UI with light and dark themes
 - 💼 **Contract Support** - Claim smart contract and token addresses
 - 🔌 **Interoperability** - DID-based identity works across decentralized platforms
+- 👥 **Social Graph** - Follow/unfollow users, send friend requests, and build your decentralized network
+- 🔑 **PGP Signatures** - Add PGP signatures for additional cryptographic verification
 
 ### 📚 Documentation
 
