@@ -1,7 +1,9 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { ethers } from 'ethers';
   import { ethersStore } from '../stores/ethers';
   import { themeStore } from '../stores/theme';
+  import { resolveAddressOrENS, isENSName } from '../utils/ens';
 
   const dispatch = createEventDispatcher();
 
@@ -9,9 +11,15 @@
   let searchAddress = '';
   let recentClaims = [];
   let loading = false;
+  let searchError = null;
+  let provider = null;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
+  });
+
+  ethersStore.subscribe(value => {
+    provider = value.provider;
   });
 
   // Mock data for demonstration
@@ -36,9 +44,37 @@
     }
   ];
 
-  function handleSearch() {
-    if (searchAddress) {
-      dispatch('viewAddress', { view: 'address', address: searchAddress });
+  async function handleSearch() {
+    if (!searchAddress) {
+      return;
+    }
+
+    searchError = null;
+    loading = true;
+
+    try {
+      // If provider is available and input looks like ENS name, try to resolve it
+      if (provider && isENSName(searchAddress)) {
+        const { address, ensName } = await resolveAddressOrENS(searchAddress, provider);
+        
+        if (address) {
+          dispatch('viewAddress', { view: 'address', address, ensName });
+        } else {
+          searchError = 'ENS name not found or could not be resolved';
+        }
+      } else {
+        // Validate address format before treating as direct address
+        if (ethers.isAddress(searchAddress)) {
+          dispatch('viewAddress', { view: 'address', address: searchAddress });
+        } else {
+          searchError = 'Invalid address format. Please enter a valid Ethereum address or ENS name.';
+        }
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      searchError = 'Error searching for address';
+    } finally {
+      loading = false;
     }
   }
 
@@ -70,14 +106,18 @@
     <div class="search-bar">
       <input
         type="text"
-        placeholder="Search by address or name (0x...)"
+        placeholder="Search by address or ENS name (0x... or name.eth)"
         bind:value={searchAddress}
         on:keypress={(e) => e.key === 'Enter' && handleSearch()}
+        disabled={loading}
       />
-      <button class="btn-search" on:click={handleSearch}>
-        Search
+      <button class="btn-search" on:click={handleSearch} disabled={loading}>
+        {loading ? 'Searching...' : 'Search'}
       </button>
     </div>
+    {#if searchError}
+      <div class="search-error">{searchError}</div>
+    {/if}
   </div>
 
   <div class="stats">
@@ -171,6 +211,21 @@
     background: rgba(26, 26, 46, 0.9);
   }
 
+  .search-error {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: 8px;
+    color: #ef4444;
+    text-align: center;
+  }
+
+  .explorer.dark .search-error {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+  }
+
   .search-bar input {
     flex: 1;
     border: none;
@@ -203,6 +258,16 @@
   .btn-search:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+  }
+
+  .btn-search:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-search:disabled:hover {
+    transform: none;
+    box-shadow: none;
   }
 
   .stats {

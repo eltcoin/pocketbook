@@ -2,9 +2,11 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import { lookupENSName } from '../utils/ens';
   import MultiChainView from './MultiChainView.svelte';
 
   export let address;
+  export let ensName = null;
 
   const dispatch = createEventDispatcher();
 
@@ -14,6 +16,8 @@
   let claimData = null;
   let isOwner = false;
   let userAddress = null;
+  let resolvedENSName = ensName;
+  let provider = null;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -21,9 +25,20 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
+    // Get provider from the primary chain
+    provider = value.chains?.[value.primaryChainId]?.provider || null;
   });
 
   onMount(async () => {
+    // Try to resolve ENS name if not already provided
+    if (!resolvedENSName && provider && address) {
+      try {
+        resolvedENSName = await lookupENSName(address, provider);
+      } catch (error) {
+        console.error('Error resolving ENS name:', error);
+      }
+    }
+
     // Simulate fetching claim data
     await new Promise(resolve => setTimeout(resolve, 1000));
     
@@ -96,6 +111,12 @@
             <span class="verified-icon">✓</span>
             <span class="address-text">{shortenAddress(address)}</span>
           </div>
+          {#if resolvedENSName}
+            <div class="ens-badge">
+              <span class="ens-icon">🏷️</span>
+              <span class="ens-name">{resolvedENSName}</span>
+            </div>
+          {/if}
           {#if isOwner}
             <div class="owner-badge">You own this address</div>
           {/if}
@@ -192,6 +213,12 @@
         <div class="unclaimed-icon">🔓</div>
         <h2>Unclaimed Address</h2>
         <div class="address-display">{address}</div>
+        {#if resolvedENSName}
+          <div class="ens-display">
+            <span class="ens-icon">🏷️</span>
+            <span class="ens-name">{resolvedENSName}</span>
+          </div>
+        {/if}
         <p>This address has not been claimed yet. The owner can claim it to add verified metadata.</p>
         
         {#if userAddress === address}
@@ -371,6 +398,32 @@
 
   .verified-icon {
     color: #4caf50;
+  }
+
+  .ens-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.5rem 1rem;
+    border-radius: 12px;
+    color: #8b5cf6;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    margin-left: 0.5rem;
+  }
+
+  .address-view.dark .ens-badge {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .ens-icon {
+    font-size: 1.1rem;
+  }
+
+  .ens-name {
+    font-family: 'Courier New', monospace;
   }
 
   .owner-badge {
@@ -681,6 +734,32 @@
   .address-view.dark .address-display {
     background: rgba(167, 139, 250, 0.1);
     color: #a78bfa;
+  }
+
+  .ens-display {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(139, 92, 246, 0.1);
+    padding: 0.75rem 1.5rem;
+    border-radius: 12px;
+    color: #8b5cf6;
+    font-weight: 600;
+    margin: 1rem 0 1.5rem;
+  }
+
+  .address-view.dark .ens-display {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .ens-display .ens-icon {
+    font-size: 1.2rem;
+  }
+
+  .ens-display .ens-name {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
   }
 
   .unclaimed-card p {

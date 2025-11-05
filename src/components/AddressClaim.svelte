@@ -1,7 +1,8 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import { lookupENSName } from '../utils/ens';
 
   const dispatch = createEventDispatcher();
 
@@ -11,6 +12,8 @@
   let loading = false;
   let success = false;
   let error = null;
+  let ensName = null;
+  let provider = null;
 
   // Form data
   let formData = {
@@ -27,9 +30,56 @@
     darkMode = value.darkMode;
   });
 
-  multiChainStore.subscribe(value => {
-    connected = value.connected;
-    address = value.primaryAddress;
+  let unsubscribeMultiChain;
+  let currentLookupId = 0; // Track the latest lookup request
+  let isMounted = true; // Track component mount state
+  
+  onMount(() => {
+    isMounted = true;
+    
+    // Subscribe to multichain store
+    unsubscribeMultiChain = multiChainStore.subscribe(async value => {
+      connected = value.connected;
+      const newAddress = value.primaryAddress;
+      const newProvider = value.chains?.[value.primaryChainId]?.provider || null;
+      
+      // If address or provider changed, update and lookup ENS name
+      if (newAddress !== address || newProvider !== provider) {
+        address = newAddress;
+        provider = newProvider;
+        
+        // Lookup ENS name if we have both address and provider
+        if (address && provider) {
+          // Increment lookup ID to track this specific request
+          const lookupId = ++currentLookupId;
+          
+          try {
+            const resolvedName = await lookupENSName(address, provider);
+            
+            // Only update if this is still the most recent lookup and component is still mounted
+            if (lookupId === currentLookupId && isMounted) {
+              ensName = resolvedName;
+            }
+          } catch (err) {
+            console.error('Error looking up ENS name:', err);
+            // Only clear ensName if this is still the most recent lookup and component is still mounted
+            if (lookupId === currentLookupId && isMounted) {
+              ensName = null;
+            }
+          }
+        } else {
+          ensName = null;
+        }
+      }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      isMounted = false;
+      if (unsubscribeMultiChain) {
+        unsubscribeMultiChain();
+      }
+    };
   });
 
   async function handleClaim() {
@@ -95,6 +145,12 @@
       <div class="current-address">
         <label>Your Address:</label>
         <div class="address-display">{address}</div>
+        {#if ensName}
+          <div class="ens-info">
+            <span class="ens-icon">🏷️</span>
+            <span class="ens-text">ENS Name: <strong>{ensName}</strong></span>
+          </div>
+        {/if}
       </div>
 
       <div class="form-group">
@@ -313,6 +369,35 @@
 
   .claim-container.dark .address-display {
     color: #a78bfa;
+  }
+
+  .ens-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(139, 92, 246, 0.1);
+    border-radius: 8px;
+    color: #8b5cf6;
+    font-size: 0.95rem;
+  }
+
+  .claim-container.dark .ens-info {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+  }
+
+  .ens-icon {
+    font-size: 1.1rem;
+  }
+
+  .ens-text {
+    flex: 1;
+  }
+
+  .ens-text strong {
+    font-family: 'Courier New', monospace;
   }
 
   .form-group {
