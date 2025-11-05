@@ -84,6 +84,10 @@
       day: 'numeric'
     });
   }
+
+  function handleViewChange(event) {
+    dispatch('viewChange', event.detail);
+  }
 </script>
 
 <div class="address-view" class:dark={darkMode}>

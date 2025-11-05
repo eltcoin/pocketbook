@@ -120,7 +120,6 @@ export function calculateSocialStats(socialGraph) {
  * @returns {Object} Relationship information
  */
 export function getRelationshipType(userAddress, targetAddress, userSocialGraph, targetSocialGraph) {
-  const userAddrLower = userAddress.toLowerCase();
   const targetAddrLower = targetAddress.toLowerCase();
   
   const isFollowing = userSocialGraph.following.some(
@@ -153,7 +152,7 @@ export function getRelationshipType(userAddress, targetAddress, userSocialGraph,
  * @returns {Array} Sorted array of addresses
  */
 export function sortByMetric(addresses, socialGraphs, sortBy = 'followers') {
-  return addresses.sort((a, b) => {
+  return [...addresses].sort((a, b) => {
     const graphA = socialGraphs[a.toLowerCase()] || { followers: [], following: [], friends: [] };
     const graphB = socialGraphs[b.toLowerCase()] || { followers: [], following: [], friends: [] };
     

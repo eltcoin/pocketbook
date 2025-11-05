@@ -54,7 +54,7 @@ struct SocialGraph {
 string pgpSignature;
 ```
 
-#### New Functions (9 total)
+#### New Functions (10 total)
 1. `followUser(address)` - Follow a user
 2. `unfollowUser(address)` - Unfollow a user
 3. `sendFriendRequest(address)` - Send friend request

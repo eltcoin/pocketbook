@@ -193,18 +193,18 @@
     </div>
   {:else}
     <div class="social-stats">
-      <div class="stat-item" on:click={() => activeTab = 'followers'} class:active={activeTab === 'followers'}>
+      <button type="button" class="stat-item" on:click={() => activeTab = 'followers'} class:active={activeTab === 'followers'}>
         <div class="stat-value">{socialGraph.followers.length}</div>
         <div class="stat-label">Followers</div>
-      </div>
-      <div class="stat-item" on:click={() => activeTab = 'following'} class:active={activeTab === 'following'}>
+      </button>
+      <button type="button" class="stat-item" on:click={() => activeTab = 'following'} class:active={activeTab === 'following'}>
         <div class="stat-value">{socialGraph.following.length}</div>
         <div class="stat-label">Following</div>
-      </div>
-      <div class="stat-item" on:click={() => activeTab = 'friends'} class:active={activeTab === 'friends'}>
+      </button>
+      <button type="button" class="stat-item" on:click={() => activeTab = 'friends'} class:active={activeTab === 'friends'}>
         <div class="stat-value">{socialGraph.friends.length}</div>
         <div class="stat-label">Friends</div>
-      </div>
+      </button>
     </div>
 
     <div class="social-content">
@@ -215,11 +215,11 @@
             <p class="empty-message">No followers yet</p>
           {:else}
             {#each socialGraph.followers as follower}
-              <div class="address-item" on:click={() => viewAddress(follower)}>
+              <button type="button" class="address-item" on:click={() => viewAddress(follower)}>
                 <span class="address-icon">👤</span>
                 <span class="address-text">{shortenAddress(follower)}</span>
                 <span class="arrow">→</span>
-              </div>
+              </button>
             {/each}
           {/if}
         </div>
@@ -230,11 +230,11 @@
             <p class="empty-message">Not following anyone yet</p>
           {:else}
             {#each socialGraph.following as following}
-              <div class="address-item" on:click={() => viewAddress(following)}>
+              <button type="button" class="address-item" on:click={() => viewAddress(following)}>
                 <span class="address-icon">👤</span>
                 <span class="address-text">{shortenAddress(following)}</span>
                 <span class="arrow">→</span>
-              </div>
+              </button>
             {/each}
           {/if}
         </div>
@@ -245,11 +245,11 @@
             <p class="empty-message">No friends yet</p>
           {:else}
             {#each socialGraph.friends as friend}
-              <div class="address-item" on:click={() => viewAddress(friend)}>
+              <button type="button" class="address-item" on:click={() => viewAddress(friend)}>
                 <span class="address-icon">👥</span>
                 <span class="address-text">{shortenAddress(friend)}</span>
                 <span class="arrow">→</span>
-              </div>
+              </button>
             {/each}
           {/if}
         </div>
@@ -385,6 +385,9 @@
     cursor: pointer;
     transition: all 0.3s ease;
     border: 2px solid transparent;
+    width: 100%;
+    font-family: inherit;
+    font-size: inherit;
   }
 
   .stat-item:hover {
@@ -439,6 +442,11 @@
     margin-bottom: 0.5rem;
     cursor: pointer;
     transition: all 0.3s ease;
+    width: 100%;
+    border: none;
+    text-align: left;
+    font-family: inherit;
+    font-size: inherit;
   }
 
   .address-item:hover {
