@@ -71,22 +71,59 @@ See [docs/REPUTATION_SYSTEM.md](./docs/REPUTATION_SYSTEM.md) for reputation syst
 
 ### 📸 Screenshots
 
+Pocketbook features a modern, professional design with a clean card-based interface and beautiful light/dark modes.
+
 #### Explorer View - Light Mode
-Browse and discover claimed addresses on the decentralized network with statistics dashboard
+Browse and discover claimed addresses with a modern, clean interface featuring neutral slate colors and subtle shadows.
 
-![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/0e858d84-1acd-4e64-9c6b-5acd8afd60f2)
+![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/41145dfb-1c68-4240-ba8e-2afacceecdf6)
 
-*Full-page explorer view showing search, statistics, and recent claims*
+*Modern card-based explorer with statistics dashboard, search functionality, and recent claims feed*
 
-#### Dark Mode
-Night mode support for comfortable viewing
+#### Explorer View - Dark Mode
+Comfortable dark theme with enhanced contrast and professional styling.
 
-![Dark Mode Explorer](./screenshots/explorer-dark-mode.png)
+![Dark Mode Explorer](https://github.com/user-attachments/assets/eaa8beb0-32bb-4c75-85d6-96378d704202)
 
-#### Claim Address Page
-Register your identity on the blockchain
+*Dark mode featuring #0f172a background with #1e293b cards and subtle borders for excellent readability*
 
-![Claim Address Page](./screenshots/claim-page-dark.png)
+#### Claim Address Page - Dark Mode
+Streamlined claiming interface with clear visual hierarchy and modern form design.
+
+![Claim Address Page Dark](https://github.com/user-attachments/assets/a6e824f9-14ad-49ab-8dfa-eef9de98225b)
+
+#### Claim Address Page - Light Mode
+Clean, professional claim interface with proper spacing and matte card design.
+
+![Claim Address Page Light](https://github.com/user-attachments/assets/bbe8bca6-3faa-4221-b3a3-b74f7c5d87a5)
+
+#### Admin Panel
+Professional admin interface for contract deployment across multiple networks.
+
+![Admin Panel](https://github.com/user-attachments/assets/56ef8b1b-0bf4-40be-abae-1cb2d241c3bc)
+
+### 🎨 Design System
+
+The UI features a modern design system with:
+
+- **Color Palette**: 
+  - Light mode: `#f8fafc` background with `#ffffff` cards
+  - Dark mode: `#0f172a` background with `#1e293b` cards
+  - Clean slate-based neutral colors throughout
+  
+- **Typography**: Modern Inter font family with refined weights (600-800) and improved spacing
+
+- **Components**: 
+  - Matte cards with 10-12px border radius
+  - Subtle shadows: `0 1px 3px` for elevation
+  - Smooth hover effects with `translateY(-2px)` transforms
+  - Solid, accessible buttons with proper contrast
+  
+- **Visual Effects**:
+  - No glassmorphism or blur effects
+  - Clean borders (`1px solid`) with proper color hierarchy
+  - Professional spacing and layout
+  - Enhanced monospace font stack for addresses
 
 ---
 
