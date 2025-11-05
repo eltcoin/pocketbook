@@ -5,6 +5,7 @@
   import { lookupENSName } from '../utils/ens';
   import MultiChainView from './MultiChainView.svelte';
   import SocialGraph from './SocialGraph.svelte';
+  import SocialGraphExplorer from './SocialGraphExplorer.svelte';
 
   export let address;
   export let ensName = null;
@@ -19,6 +20,12 @@
   let userAddress = null;
   let resolvedENSName = ensName;
   let provider = null;
+  let contract = null;
+  let socialGraphData = {
+    following: [],
+    followers: [],
+    friends: []
+  };
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -28,6 +35,7 @@
     userAddress = value.primaryAddress;
     // Get provider from the primary chain
     provider = value.chains?.[value.primaryChainId]?.provider || null;
+    contract = value.chains?.[value.primaryChainId]?.contract || null;
   });
 
   onMount(async () => {
@@ -37,6 +45,20 @@
         resolvedENSName = await lookupENSName(address, provider);
       } catch (error) {
         console.error('Error resolving ENS name:', error);
+      }
+    }
+
+    // Load social graph data if contract is available
+    if (contract) {
+      try {
+        const result = await contract.getSocialGraph(address);
+        socialGraphData = {
+          following: result[0] || [],
+          followers: result[1] || [],
+          friends: result[2] || []
+        };
+      } catch (error) {
+        console.error('Error loading social graph:', error);
       }
     }
 
@@ -209,6 +231,8 @@
       </div>
 
       <SocialGraph {address} {isOwner} on:viewAddress={handleViewChange} />
+
+      <SocialGraphExplorer {address} socialGraph={socialGraphData} on:viewAddress={handleViewChange} />
 
       <MultiChainView {address} />
 
