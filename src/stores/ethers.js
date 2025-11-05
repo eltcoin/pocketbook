@@ -23,8 +23,21 @@ function createEthersStore() {
     "function addViewer(address _viewer) public",
     "function removeViewer(address _viewer) public",
     "function revokeClaim() public",
+    // DID-related functions
+    "function resolveDID(string memory _did) public view returns (address)",
+    "function getDIDDocument(address _address) public view returns (string memory did, address controller, uint256 created, uint256 updated)",
+    "function getDIDPublicKeys(address _address) public view returns (bytes[] memory)",
+    "function addServiceEndpoint(string memory _serviceId, string memory _serviceType, string memory _endpoint) public",
+    "function removeServiceEndpoint(string memory _serviceId) public",
+    "function getServiceEndpoints(address _address) public view returns (string[] memory ids, string[] memory types, string[] memory endpoints)",
+    "function addAlsoKnownAs(string memory _identifier) public",
+    "function getAlsoKnownAs(address _address) public view returns (string[] memory)",
     "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
-    "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)"
+    "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)",
+    "event DIDCreated(address indexed claimedAddress, string did, uint256 timestamp)",
+    "event DIDUpdated(address indexed claimedAddress, string did, uint256 timestamp)",
+    "event ServiceEndpointAdded(address indexed claimedAddress, string serviceId, uint256 timestamp)",
+    "event ServiceEndpointRemoved(address indexed claimedAddress, string serviceId, uint256 timestamp)"
   ];
 
   // Store reference to account and network change handlers to prevent memory leaks

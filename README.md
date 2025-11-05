@@ -24,11 +24,13 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 
 - 🎯 **Address Claiming** - Prove ownership and attach verified metadata to any address
 - 🔐 **Cryptographic Security** - All claims signed and verified on-chain
+- 🆔 **DID Support** - W3C compliant Decentralized Identifiers (did:ethr) for self-sovereign identity
 - 🌐 **Multi-Chain Support** - Simultaneous connectivity to Ethereum, Polygon, BSC, Arbitrum, Optimism, and Avalanche
 - 🔗 **Cross-Chain Identity** - View and manage claims across multiple blockchain networks
 - 🔒 **Privacy Controls** - Choose what's public and whitelist private viewers
 - 🌓 **Dark Mode** - Beautiful UI with light and dark themes
 - 💼 **Contract Support** - Claim smart contract and token addresses
+- 🔌 **Interoperability** - DID-based identity works across decentralized platforms
 
 ### 📚 Documentation
 

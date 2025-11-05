@@ -150,6 +150,17 @@
           </div>
         </div>
 
+        <div class="profile-section did-section">
+          <h3>🆔 Decentralized Identifier (DID)</h3>
+          <div class="did-info">
+            <div class="did-value">did:ethr:{address.toLowerCase()}</div>
+            <p class="did-description">
+              This is a W3C compliant DID that uniquely identifies this address in a decentralized, 
+              interoperable way. DIDs enable self-sovereign identity and cross-platform compatibility.
+            </p>
+          </div>
+        </div>
+
         {#if isOwner}
           <div class="owner-actions">
             <button class="btn-action btn-edit">Edit Profile</button>
@@ -467,6 +478,52 @@
     color: #4caf50 !important;
     font-weight: 600;
   }
+
+  .did-section {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(102, 126, 234, 0.2);
+  }
+
+  .address-view.dark .did-section {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    border-color: rgba(102, 126, 234, 0.3);
+  }
+
+  .did-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .did-value {
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    word-break: break-all;
+    color: #667eea;
+    font-weight: 600;
+  }
+
+  .address-view.dark .did-value {
+    background: rgba(255, 255, 255, 0.05);
+    color: #8b9ff7;
+  }
+
+  .did-description {
+    font-size: 0.9rem;
+    color: #666;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .address-view.dark .did-description {
+    color: #aaa;
+  }
+
 
   .owner-actions {
     display: flex;
