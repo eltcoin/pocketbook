@@ -7,6 +7,7 @@
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
   import Reputation from './Reputation.svelte';
+  import Icon from './Icon.svelte';
 
   export let address;
   export let ensName = null;
@@ -163,7 +164,7 @@
           <div class="links-grid">
             {#if claimData.website}
               <a href={claimData.website} target="_blank" rel="noopener" class="link-item">
-                <span class="link-icon">🌐</span>
+                <Icon name="globe" size="1.25rem" />
                 <span>Website</span>
               </a>
             {/if}
@@ -240,7 +241,10 @@
       <MultiChainView {address} />
 
       <div class="verification-box">
-        <h3>🔐 Cryptographic Verification</h3>
+        <h3>
+          <Icon name="shield-alt" size="1.5rem" />
+          <span>Cryptographic Verification</span>
+        </h3>
         <p>This claim is secured by a cryptographic signature proving ownership of the address.</p>
         <div class="verification-details">
           <div class="verification-item">
@@ -292,14 +296,14 @@
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🔐</span>
+            <Icon name="shield-alt" size="2rem" />
             <div>
               <strong>Cryptographically Secured</strong>
               <p>All claims are signed and verified on-chain</p>
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🌐</span>
+            <Icon name="globe" size="2rem" />
             <div>
               <strong>Decentralized Network</strong>
               <p>Build your web of trust without central authorities</p>

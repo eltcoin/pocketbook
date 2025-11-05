@@ -4,6 +4,7 @@
   import { themeStore } from '../stores/theme';
   import { toastStore } from '../stores/toast';
   import { ethers } from 'ethers';
+  import Icon from './Icon.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -124,7 +125,10 @@
 <div class="admin-panel" class:dark={darkMode}>
   <div class="admin-header">
     <button class="btn-back" on:click={goBack}>← Back to Explorer</button>
-    <h2>🛠️ Admin Panel - Contract Deployment</h2>
+    <h2>
+      <Icon name="tools" size="1.75rem" />
+      <span>Admin Panel - Contract Deployment</span>
+    </h2>
     <p>Deploy the AddressClaim contract to multiple blockchain networks</p>
   </div>
 

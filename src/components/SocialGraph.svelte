@@ -3,6 +3,7 @@
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { toastStore } from '../stores/toast';
+  import Icon from './Icon.svelte';
 
   export let address;
   export let isOwner = false;
@@ -151,7 +152,10 @@
 
 <div class="social-graph" class:dark={darkMode}>
   <div class="social-header">
-    <h2>🌐 Social Network</h2>
+    <h2>
+      <Icon name="network-wired" size="1.75rem" />
+      <span>Social Network</span>
+    </h2>
     
     {#if !isOwner && userAddress && userAddress !== address}
       <div class="action-buttons">

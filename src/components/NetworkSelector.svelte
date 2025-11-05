@@ -3,6 +3,7 @@
   import { themeStore } from '../stores/theme';
   import { getMainnetNetworks, getTestnetNetworks } from '../config/networks';
   import { toastStore } from '../stores/toast';
+  import Icon from './Icon.svelte';
 
   let darkMode = false;
   let connected = false;
@@ -60,7 +61,7 @@
   {#if connected && primaryNetworkConfig}
     <button class="network-button" on:click|stopPropagation={toggleDropdown}>
       <div class="network-badge" class:testnet={primaryNetworkConfig.isTestnet}>
-        <span class="network-icon">🌐</span>
+        <Icon name="globe" size="1.125rem" />
         <span class="network-name">{primaryNetworkConfig.shortName}</span>
       </div>
       <span class="dropdown-arrow">{showDropdown ? '▲' : '▼'}</span>
