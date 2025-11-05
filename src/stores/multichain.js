@@ -340,38 +340,39 @@ function createMultiChainStore() {
     getClaimsAcrossChains: async (address) => {
       const currentStore = get(storeMethods);
 
-      const results = [];
-
-      for (const [chainId, chainData] of Object.entries(currentStore.chains)) {
-        if (!chainData.isAvailable || !chainData.contract) continue;
-
-        try {
-          const isClaimed = await chainData.contract.isClaimed(address);
-          if (isClaimed) {
-            const claim = await chainData.contract.getClaim(address);
-            results.push({
-              chainId: Number(chainId),
-              network: chainData.networkConfig.name,
-              claim: {
-                claimant: claim[0],
-                name: claim[1],
-                avatar: claim[2],
-                bio: claim[3],
-                website: claim[4],
-                twitter: claim[5],
-                github: claim[6],
-                claimTime: claim[7],
-                isActive: claim[8],
-                isPrivate: claim[9]
-              }
-            });
+      const claimPromises = Object.entries(currentStore.chains)
+        .filter(([_, chainData]) => chainData.isAvailable && chainData.contract)
+        .map(async ([chainId, chainData]) => {
+          try {
+            const isClaimed = await chainData.contract.isClaimed(address);
+            if (isClaimed) {
+              const claim = await chainData.contract.getClaim(address);
+              return {
+                chainId: Number(chainId),
+                network: chainData.networkConfig.name,
+                claim: {
+                  claimant: claim[0],
+                  name: claim[1],
+                  avatar: claim[2],
+                  bio: claim[3],
+                  website: claim[4],
+                  twitter: claim[5],
+                  github: claim[6],
+                  claimTime: claim[7],
+                  isActive: claim[8],
+                  isPrivate: claim[9]
+                }
+              };
+            }
+            return null;
+          } catch (error) {
+            console.error(`Error checking claim on ${chainData.networkConfig.name}:`, error);
+            return null;
           }
-        } catch (error) {
-          console.error(`Error checking claim on ${chainData.networkConfig.name}:`, error);
-        }
-      }
+        });
 
-      return results;
+      const results = await Promise.all(claimPromises);
+      return results.filter(Boolean);
     },
 
     /**
