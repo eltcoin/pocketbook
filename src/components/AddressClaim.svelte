@@ -31,6 +31,7 @@
   });
 
   let unsubscribeMultiChain;
+  let currentLookupId = 0; // Track the latest lookup request
   
   onMount(() => {
     // Subscribe to multichain store
@@ -46,11 +47,22 @@
         
         // Lookup ENS name if we have both address and provider
         if (address && provider) {
+          // Increment lookup ID to track this specific request
+          const lookupId = ++currentLookupId;
+          
           try {
-            ensName = await lookupENSName(address, provider);
+            const resolvedName = await lookupENSName(address, provider);
+            
+            // Only update if this is still the most recent lookup
+            if (lookupId === currentLookupId) {
+              ensName = resolvedName;
+            }
           } catch (err) {
             console.error('Error looking up ENS name:', err);
-            ensName = null;
+            // Only clear ensName if this is still the most recent lookup
+            if (lookupId === currentLookupId) {
+              ensName = null;
+            }
           }
         } else {
           ensName = null;

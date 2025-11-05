@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { ethers } from 'ethers';
   import { ethersStore } from '../stores/ethers';
   import { themeStore } from '../stores/theme';
   import { resolveAddressOrENS, isENSName } from '../utils/ens';
@@ -62,8 +63,12 @@
           searchError = 'ENS name not found or could not be resolved';
         }
       } else {
-        // Treat as direct address
-        dispatch('viewAddress', { view: 'address', address: searchAddress });
+        // Validate address format before treating as direct address
+        if (ethers.isAddress(searchAddress)) {
+          dispatch('viewAddress', { view: 'address', address: searchAddress });
+        } else {
+          searchError = 'Invalid address format. Please enter a valid Ethereum address or ENS name.';
+        }
       }
     } catch (error) {
       console.error('Search error:', error);
