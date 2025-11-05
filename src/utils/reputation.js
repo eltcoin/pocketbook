@@ -1,20 +1,28 @@
 /**
- * Reputation System - Evidence-Based Subjective Logic
+ * Reputation System - Evidence-Based Subjective Logic (EBSL)
  * 
  * Implements a PGP-style web of trust with Evidence-Based Subjective Logic
- * for computing reputation scores off-chain. Based on the principles from:
+ * for computing reputation scores off-chain. Based on:
+ * - Škoric, de Hoogh, Zannone: "Flow-based reputation with uncertainty: 
+ *   evidence-based subjective logic" (Int. J. Inf. Secur. 2016)
  * - Jøsang, A. "Subjective Logic" (2016)
  * - PGP web of trust model
  * 
- * Key concepts:
- * - Trust is transitive and can be computed through paths
- * - Direct attestations are weighted more than indirect ones
- * - Belief, disbelief, and uncertainty are tracked separately
- * - Reputation is computed from multiple evidence sources
+ * Key EBSL improvements over traditional Subjective Logic:
+ * - New discounting operator (⊙) based on evidence flow, not opinion multiplication
+ * - Right-distributivity: x ⊙ (y ⊕ z) = (x ⊙ y) ⊕ (x ⊙ z)
+ * - Scalar multiplication consistent with evidence addition
+ * - Enables flow-based reputation for arbitrary trust networks
+ * - No need to discard information or transform to canonical form
+ * - Avoids double-counting of evidence
+ * 
+ * Constant c: Soft threshold on evidence amount (default: 2 for compatibility)
  */
 
 /**
  * Evidence-Based Subjective Logic Opinion
+ * Based on Theorem 1 from Škoric et al. (2016)
+ * 
  * @typedef {Object} Opinion
  * @property {number} belief - Belief component (0-1)
  * @property {number} disbelief - Disbelief component (0-1)
@@ -22,38 +30,77 @@
  * @property {number} baseRate - Base rate / prior probability (0-1)
  */
 
+// Constant c: soft threshold on evidence (from paper Theorem 1)
+// Interpretation: beyond this threshold, enough confidence to form opinion
+const EVIDENCE_CONSTANT_C = 2;
+
 /**
- * Convert trust level (0-100) to subjective logic opinion
- * Uses the evidence-based approach where trust levels are mapped to opinions
+ * Convert evidence (p, n) to opinion using EBSL formula
+ * Formula from Theorem 1: (b, d, u) = (p, n, c) / (p + n + c)
  * 
- * @param {number} trustLevel - Trust level from 0 to 100
- * @param {number} weight - Weight/confidence in the trust level (0-1)
+ * @param {number} p - Positive evidence (>=0)
+ * @param {number} n - Negative evidence (>=0)
+ * @param {number} c - Evidence constant (default: 2)
  * @returns {Opinion} Subjective logic opinion
  */
-export function trustLevelToOpinion(trustLevel, weight = 1.0) {
-  // Normalize trust level to 0-1 range
-  const normalizedTrust = Math.max(0, Math.min(100, trustLevel)) / 100;
-  
-  // Map trust level to belief/disbelief with uncertainty
-  // Higher trust = higher belief
-  // Lower trust = higher disbelief
-  // Weight affects uncertainty
-  
-  const belief = normalizedTrust * weight;
-  const disbelief = (1 - normalizedTrust) * weight;
-  const uncertainty = 1 - weight;
+export function evidenceToOpinion(p, n, c = EVIDENCE_CONSTANT_C) {
+  const total = p + n + c;
   
   return {
-    belief,
-    disbelief,
-    uncertainty,
+    belief: p / total,
+    disbelief: n / total,
+    uncertainty: c / total,
     baseRate: 0.5 // Neutral base rate
   };
 }
 
 /**
- * Combine multiple opinions using cumulative fusion
- * This is the key operation in subjective logic for combining evidence
+ * Convert opinion to evidence amounts
+ * Inverse of evidenceToOpinion
+ * 
+ * @param {Opinion} opinion - Opinion to convert
+ * @param {number} c - Evidence constant (default: 2)
+ * @returns {Object} Evidence with p (positive) and n (negative)
+ */
+export function opinionToEvidence(opinion, c = EVIDENCE_CONSTANT_C) {
+  const { belief, disbelief, uncertainty } = opinion;
+  
+  // From formula: p = c * b / u, n = c * d / u
+  if (uncertainty === 0) {
+    // Dogmatic opinion - infinite evidence
+    return { p: Infinity, n: Infinity };
+  }
+  
+  return {
+    p: c * belief / uncertainty,
+    n: c * disbelief / uncertainty
+  };
+}
+
+/**
+ * Convert trust level (0-100) to subjective logic opinion using EBSL
+ * Maps trust level to evidence, then to opinion
+ * 
+ * @param {number} trustLevel - Trust level from 0 to 100
+ * @param {number} evidenceAmount - Total amount of evidence (default: 10)
+ * @returns {Opinion} Subjective logic opinion
+ */
+export function trustLevelToOpinion(trustLevel, evidenceAmount = 10) {
+  // Normalize trust level to 0-1 range
+  const normalizedTrust = Math.max(0, Math.min(100, trustLevel)) / 100;
+  
+  // Map to positive and negative evidence
+  // Higher trust = more positive evidence
+  const p = normalizedTrust * evidenceAmount;
+  const n = (1 - normalizedTrust) * evidenceAmount;
+  
+  return evidenceToOpinion(p, n);
+}
+
+/**
+ * Combine multiple opinions using cumulative fusion (consensus operator ⊕)
+ * Corresponds to addition of evidence from independent sources
+ * Formula from Lemma 1: Combines evidence (p1+p2, n1+n2, c) / (p1+n1+p2+n2+c)
  * 
  * @param {Opinion} opinion1 - First opinion
  * @param {Opinion} opinion2 - Second opinion
@@ -70,7 +117,7 @@ export function fuseOpinions(opinion1, opinion2) {
     return { belief: 0, disbelief: 0, uncertainty: 1, baseRate: 0.5 };
   }
   
-  // Cumulative fusion formula
+  // Cumulative fusion formula (Definition 2 from paper)
   const belief = (b1 * u2 + b2 * u1) / denominator;
   const disbelief = (d1 * u2 + d2 * u1) / denominator;
   const uncertainty = (u1 * u2) / denominator;
@@ -82,21 +129,101 @@ export function fuseOpinions(opinion1, opinion2) {
 }
 
 /**
- * Discount an opinion by a trust factor (for transitive trust)
- * When A trusts B, and B trusts C, we discount B's opinion of C by A's trust in B
+ * Scalar multiplication of opinion (Definition 11 from paper)
+ * Multiplies the evidence underlying the opinion by a scalar
  * 
- * @param {Opinion} opinion - Opinion to discount
- * @param {number} trustFactor - Trust factor (0-1)
- * @returns {Opinion} Discounted opinion
+ * @param {number} alpha - Scalar multiplier (>= 0)
+ * @param {Opinion} opinion - Opinion to multiply
+ * @returns {Opinion} Scaled opinion
  */
-export function discountOpinion(opinion, trustFactor) {
-  const { belief, disbelief, uncertainty, baseRate } = opinion;
+export function scalarMultiply(alpha, opinion) {
+  const { belief, disbelief, uncertainty } = opinion;
+  
+  if (alpha < 0) {
+    throw new Error('Scalar must be non-negative');
+  }
+  
+  if (alpha === 0) {
+    // 0 · x = U (full uncertainty)
+    return { belief: 0, disbelief: 0, uncertainty: 1, baseRate: 0.5 };
+  }
+  
+  // Formula from Definition 11: α · x = (αb, αd, u) / (α(b+d) + u)
+  const denominator = alpha * (belief + disbelief) + uncertainty;
   
   return {
-    belief: trustFactor * belief,
-    disbelief: trustFactor * disbelief,
-    uncertainty: 1 - trustFactor * (belief + disbelief),
-    baseRate
+    belief: (alpha * belief) / denominator,
+    disbelief: (alpha * disbelief) / denominator,
+    uncertainty: uncertainty / denominator,
+    baseRate: opinion.baseRate
+  };
+}
+
+/**
+ * EBSL Discounting operator (⊙) - Definition 13 from paper
+ * Implements flow of evidence with scalar multiplication
+ * g(x) = p(x) / θ where θ > max positive evidence in system
+ * 
+ * This operator has:
+ * - Right-distributivity: x ⊙ (y ⊕ z) = (x ⊙ y) ⊕ (x ⊙ z)
+ * - Left-distributivity: (x ⊕ y) ⊙ z = (x ⊙ z) ⊕ (y ⊙ z)
+ * - Associativity: x ⊙ (y ⊙ z) = (x ⊙ y) ⊙ z
+ * 
+ * @param {Opinion} x - Discounting opinion (trust in source)
+ * @param {Opinion} y - Opinion to discount
+ * @param {number} theta - Threshold (must be > max positive evidence)
+ * @returns {Opinion} Discounted opinion
+ */
+export function ebslDiscount(x, y, theta = 100) {
+  // Get positive evidence from x
+  const { p: px } = opinionToEvidence(x);
+  
+  // Discounting factor g(x) = p(x) / θ
+  const gx = px / theta;
+  
+  // Apply scalar multiplication: x ⊙ y = g(x) · y
+  return scalarMultiply(gx, y);
+}
+
+/**
+ * Generic EBSL Discounting operator (⊡) - Definition 12 from paper  
+ * Uses custom function g(x) to determine discounting factor
+ * Common choices: g(x) = belief(x) or g(x) = expectation(x)
+ * 
+ * @param {Opinion} x - Discounting opinion (trust in source)
+ * @param {Opinion} y - Opinion to discount
+ * @param {Function} gFunc - Function to compute discounting factor (default: use belief)
+ * @returns {Opinion} Discounted opinion
+ */
+export function genericDiscount(x, y, gFunc = null) {
+  // Default: use belief component as discounting factor
+  const g = gFunc ? gFunc(x) : x.belief;
+  
+  // Clamp g to [0, 1]
+  const gClamped = Math.max(0, Math.min(1, g));
+  
+  // Apply scalar multiplication: x ⊡ y = g(x) · y
+  return scalarMultiply(gClamped, y);
+}
+
+/**
+ * Old-style discount operation for comparison (traditional Subjective Logic)
+ * This is the ⊗ operator from traditional SL, included for compatibility
+ * Note: This operator lacks right-distributivity and can give counterintuitive results
+ * 
+ * @param {Opinion} x - Discounting opinion
+ * @param {Opinion} y - Opinion to discount
+ * @returns {Opinion} Discounted opinion
+ */
+export function discountOpinion(x, y) {
+  const { belief: xb, disbelief: xd, uncertainty: xu } = x;
+  const { belief: yb, disbelief: yd, uncertainty: yu } = y;
+  
+  return {
+    belief: xb * yb,
+    disbelief: xb * yd,
+    uncertainty: xd + xu + xb * yu,
+    baseRate: y.baseRate
   };
 }
 
@@ -137,24 +264,45 @@ export function calculateDirectReputation(attestations) {
 }
 
 /**
- * Calculate transitive trust through a path
+ * Calculate transitive trust through a path using EBSL
  * For example: A -> B -> C means A's trust in C through B
+ * Uses the EBSL discounting operator for evidence flow
  * 
  * @param {Array<Opinion>} pathOpinions - Array of opinions along the path
+ * @param {string} discountMethod - 'ebsl' (⊙), 'generic' (⊡), or 'traditional' (⊗)
+ * @param {number} theta - Threshold for EBSL discounting (if using 'ebsl')
  * @returns {Opinion} Transitive opinion
  */
-export function calculateTransitiveTrust(pathOpinions) {
+export function calculateTransitiveTrust(pathOpinions, discountMethod = 'generic', theta = 100) {
   if (!pathOpinions || pathOpinions.length === 0) {
     return { belief: 0, disbelief: 0, uncertainty: 1, baseRate: 0.5 };
   }
   
-  // Start with the first opinion
-  let result = pathOpinions[0];
+  if (pathOpinions.length === 1) {
+    return pathOpinions[0];
+  }
   
-  // Discount each subsequent opinion by the previous one's expectation
-  for (let i = 1; i < pathOpinions.length; i++) {
-    const trustFactor = opinionToExpectation(result);
-    result = discountOpinion(pathOpinions[i], trustFactor);
+  // Start with the last opinion in the path (the functional trust)
+  let result = pathOpinions[pathOpinions.length - 1];
+  
+  // Discount backwards through the path
+  // For path A -> B -> C, we compute: A ⊙ (B ⊙ C)
+  for (let i = pathOpinions.length - 2; i >= 0; i--) {
+    const discountingOpinion = pathOpinions[i];
+    
+    switch (discountMethod) {
+      case 'ebsl':
+        result = ebslDiscount(discountingOpinion, result, theta);
+        break;
+      case 'generic':
+        result = genericDiscount(discountingOpinion, result);
+        break;
+      case 'traditional':
+        result = discountOpinion(discountingOpinion, result);
+        break;
+      default:
+        result = genericDiscount(discountingOpinion, result);
+    }
   }
   
   return result;
@@ -207,8 +355,14 @@ export function findTrustPaths(source, target, attestationGraph, maxDepth = 3) {
 }
 
 /**
- * Calculate reputation score for an address
+ * Calculate reputation score for an address using EBSL
  * Combines direct attestations and transitive trust paths
+ * 
+ * Based on Section 6 from Škoric et al. (2016):
+ * - Uses EBSL discounting for evidence flow
+ * - Supports arbitrary trust networks with loops
+ * - No need to discard information or transform to canonical form
+ * - Avoids double-counting through right-distributivity
  * 
  * @param {string} address - Address to calculate reputation for
  * @param {Array} directAttestations - Direct attestations to this address
@@ -227,12 +381,12 @@ export function calculateReputation(
   const {
     maxPathDepth = 3,
     maxPaths = 10,
-    directWeight = 1.0,
-    transitiveWeight = 0.5,
+    discountMethod = 'generic', // 'ebsl', 'generic', or 'traditional'
+    theta = 100, // Threshold for EBSL discounting
     minTrustLevel = 50 // Minimum trust level to consider for paths
   } = options;
   
-  // Calculate direct reputation
+  // Calculate direct reputation using consensus (⊕)
   const directOpinion = calculateDirectReputation(directAttestations);
   
   // If no observer specified, return direct reputation only
@@ -243,7 +397,8 @@ export function calculateReputation(
       opinion: directOpinion,
       directCount: directAttestations.length,
       transitiveCount: 0,
-      paths: []
+      paths: [],
+      method: 'direct-only'
     };
   }
   
@@ -255,7 +410,7 @@ export function calculateReputation(
     maxPathDepth
   ).slice(0, maxPaths); // Limit number of paths
   
-  // Calculate transitive opinions from each path
+  // Calculate transitive opinions from each path using EBSL
   const transitiveOpinions = [];
   const pathDetails = [];
   
@@ -280,11 +435,12 @@ export function calculateReputation(
         break;
       }
       
-      pathOpinions.push(trustLevelToOpinion(attestation.trustLevel, 1.0));
+      pathOpinions.push(trustLevelToOpinion(attestation.trustLevel));
     }
     
     if (validPath && pathOpinions.length > 0) {
-      const transitiveOpinion = calculateTransitiveTrust(pathOpinions);
+      // Use EBSL discounting for transitive trust
+      const transitiveOpinion = calculateTransitiveTrust(pathOpinions, discountMethod, theta);
       transitiveOpinions.push(transitiveOpinion);
       pathDetails.push({
         path,
@@ -294,14 +450,13 @@ export function calculateReputation(
     }
   }
   
-  // Combine direct and transitive opinions
+  // Combine direct and transitive opinions using consensus (⊕)
+  // This is flow-based: we aggregate all available evidence
   let finalOpinion = directOpinion;
   
-  // Weight and fuse transitive opinions
+  // Fuse all transitive opinions
   for (const transitiveOpinion of transitiveOpinions) {
-    // Discount transitive opinions by the transitive weight
-    const weightedTransitive = discountOpinion(transitiveOpinion, transitiveWeight);
-    finalOpinion = fuseOpinions(finalOpinion, weightedTransitive);
+    finalOpinion = fuseOpinions(finalOpinion, transitiveOpinion);
   }
   
   const expectation = opinionToExpectation(finalOpinion);
@@ -311,7 +466,8 @@ export function calculateReputation(
     opinion: finalOpinion,
     directCount: directAttestations.length,
     transitiveCount: transitiveOpinions.length,
-    paths: pathDetails
+    paths: pathDetails,
+    method: discountMethod
   };
 }
 

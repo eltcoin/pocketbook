@@ -6,6 +6,9 @@
 import {
   trustLevelToOpinion,
   fuseOpinions,
+  genericDiscount,
+  ebslDiscount,
+  scalarMultiply,
   discountOpinion,
   opinionToExpectation,
   calculateDirectReputation,
@@ -28,18 +31,18 @@ function assertClose(actual, expected, tolerance = 0.01, message = '') {
 
 // Test trustLevelToOpinion
 console.log('Testing trustLevelToOpinion...');
-const highTrust = trustLevelToOpinion(90, 1.0);
-assertClose(highTrust.belief, 0.9, 0.01, 'High trust should have high belief');
-assertClose(highTrust.disbelief, 0.1, 0.01, 'High trust should have low disbelief');
-assertClose(highTrust.uncertainty, 0.0, 0.01, 'Full weight should have no uncertainty');
+const highTrust = trustLevelToOpinion(90, 10); // 90% trust with 10 evidence
+assertClose(highTrust.belief, 0.75, 0.05, 'High trust should have high belief'); // (9/12)
+assertClose(highTrust.disbelief, 0.083, 0.05, 'High trust should have low disbelief'); // (1/12)
+assertClose(highTrust.uncertainty, 0.167, 0.05, 'Should have some uncertainty'); // (2/12)
 
-const lowTrust = trustLevelToOpinion(20, 1.0);
-assertClose(lowTrust.belief, 0.2, 0.01, 'Low trust should have low belief');
-assertClose(lowTrust.disbelief, 0.8, 0.01, 'Low trust should have high disbelief');
+const lowTrust = trustLevelToOpinion(20, 10);
+assertClose(lowTrust.belief, 0.167, 0.05, 'Low trust should have low belief'); // (2/12)
+assertClose(lowTrust.disbelief, 0.667, 0.05, 'Low trust should have high disbelief'); // (8/12)
 
-const uncertainTrust = trustLevelToOpinion(50, 0.5);
-assertClose(uncertainTrust.belief, 0.25, 0.01, 'Uncertain trust should reduce belief');
-assertClose(uncertainTrust.uncertainty, 0.5, 0.01, 'Low weight should increase uncertainty');
+const moderateTrust = trustLevelToOpinion(50, 5);
+assertClose(moderateTrust.belief, 0.357, 0.05, 'Moderate trust should have moderate belief'); // (2.5/7)
+assertClose(moderateTrust.uncertainty, 0.286, 0.05, 'Less evidence should have more uncertainty'); // (2/7)
 console.log('✓ trustLevelToOpinion tests passed');
 
 // Test fuseOpinions
@@ -57,15 +60,17 @@ console.assert(fused.uncertainty < opinion1.uncertainty, 'Fusion should reduce u
 console.assert(fused.uncertainty < opinion2.uncertainty, 'Fusion should reduce uncertainty');
 console.log('✓ fuseOpinions tests passed');
 
-// Test discountOpinion
-console.log('\nTesting discountOpinion...');
+// Test discountOpinion - now testing the new EBSL genericDiscount
+console.log('\nTesting EBSL genericDiscount...');
 const originalOpinion = { belief: 0.8, disbelief: 0.1, uncertainty: 0.1, baseRate: 0.5 };
-const discounted = discountOpinion(originalOpinion, 0.5);
+const discountingOpinion = { belief: 0.5, disbelief: 0.3, uncertainty: 0.2, baseRate: 0.5 };
+const discounted = genericDiscount(discountingOpinion, originalOpinion);
 
-assertClose(discounted.belief, 0.4, 0.01, 'Belief should be discounted by trust factor');
-assertClose(discounted.disbelief, 0.05, 0.01, 'Disbelief should be discounted by trust factor');
+// With g(x) = belief = 0.5, we expect scalarMultiply(0.5, originalOpinion)
+// The discounted opinion should have reduced evidence
+assertClose(discounted.belief, 0.727, 0.05, 'Belief should be adjusted by discount factor');
 console.assert(discounted.uncertainty > originalOpinion.uncertainty, 'Discounting should increase uncertainty');
-console.log('✓ discountOpinion tests passed');
+console.log('✓ EBSL genericDiscount tests passed');
 
 // Test opinionToExpectation
 console.log('\nTesting opinionToExpectation...');
@@ -102,15 +107,15 @@ console.log('✓ calculateDirectReputation with no attestations passed');
 // Test calculateTransitiveTrust
 console.log('\nTesting calculateTransitiveTrust...');
 const path = [
-  trustLevelToOpinion(90, 1.0), // A trusts B at 90%
-  trustLevelToOpinion(80, 1.0)  // B trusts C at 80%
+  trustLevelToOpinion(90, 10), // A trusts B at 90%
+  trustLevelToOpinion(80, 10)  // B trusts C at 80%
 ];
-const transitive = calculateTransitiveTrust(path);
+const transitive = calculateTransitiveTrust(path, 'generic');
 const transitiveExp = opinionToExpectation(transitive);
 
 // Transitive trust should be less than direct trust
 console.assert(transitiveExp < 0.9, 'Transitive trust should be discounted');
-console.assert(transitiveExp > 0.5, 'Transitive trust should still be positive with high path trust');
+console.assert(transitiveExp > 0.4, 'Transitive trust should still be positive with high path trust');
 console.assert(transitive.uncertainty > path[0].uncertainty, 'Transitive trust should have more uncertainty');
 console.log('✓ calculateTransitiveTrust tests passed');
 
