@@ -25,7 +25,8 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
-    provider = value.providers?.[value.primaryChainId] || null;
+    // Get provider from the primary chain
+    provider = value.chains?.[value.primaryChainId]?.provider || null;
   });
 
   onMount(async () => {

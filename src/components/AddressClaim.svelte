@@ -30,23 +30,40 @@
     darkMode = value.darkMode;
   });
 
-  multiChainStore.subscribe(async value => {
-    connected = value.connected;
-    const newAddress = value.primaryAddress;
-    provider = value.providers?.[value.primaryChainId] || null;
-    
-    // If address changed and we have a provider, lookup ENS name
-    if (newAddress !== address) {
-      address = newAddress;
-      if (address && provider) {
-        try {
-          ensName = await lookupENSName(address, provider);
-        } catch (err) {
-          console.error('Error looking up ENS name:', err);
+  let unsubscribeMultiChain;
+  
+  onMount(() => {
+    // Subscribe to multichain store
+    unsubscribeMultiChain = multiChainStore.subscribe(async value => {
+      connected = value.connected;
+      const newAddress = value.primaryAddress;
+      const newProvider = value.chains?.[value.primaryChainId]?.provider || null;
+      
+      // If address or provider changed, update and lookup ENS name
+      if (newAddress !== address || newProvider !== provider) {
+        address = newAddress;
+        provider = newProvider;
+        
+        // Lookup ENS name if we have both address and provider
+        if (address && provider) {
+          try {
+            ensName = await lookupENSName(address, provider);
+          } catch (err) {
+            console.error('Error looking up ENS name:', err);
+            ensName = null;
+          }
+        } else {
           ensName = null;
         }
       }
-    }
+    });
+
+    // Cleanup subscription on unmount
+    return () => {
+      if (unsubscribeMultiChain) {
+        unsubscribeMultiChain();
+      }
+    };
   });
 
   async function handleClaim() {
