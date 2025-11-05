@@ -6,6 +6,7 @@
   import AddressClaim from './components/AddressClaim.svelte';
   import Explorer from './components/Explorer.svelte';
   import AddressView from './components/AddressView.svelte';
+  import Toast from './components/Toast.svelte';
 
   let currentView = 'explorer'; // 'explorer', 'claim', 'address'
   let selectedAddress = null;
@@ -35,6 +36,8 @@
       <AddressView address={selectedAddress} on:viewChange={handleViewChange} />
     {/if}
   </div>
+  
+  <Toast />
 </main>
 
 <style>

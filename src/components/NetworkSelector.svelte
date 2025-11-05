@@ -2,6 +2,7 @@
   import { multiChainStore, availableChains, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { getMainnetNetworks, getTestnetNetworks } from '../config/networks';
+  import { toastStore } from '../stores/toast';
 
   let darkMode = false;
   let connected = false;
@@ -38,8 +39,9 @@
     const result = await multiChainStore.switchNetwork(network.chainId);
     if (!result.success) {
       console.error('Failed to switch network:', result.error);
-      // TODO: Replace with proper notification system
-      alert(`Failed to switch network: ${result.error}`);
+      toastStore.show(`Failed to switch network: ${result.error}`, 'error');
+    } else {
+      toastStore.show(`Switched to ${network.name}`, 'success');
     }
     closeDropdown();
   }

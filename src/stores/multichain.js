@@ -1,6 +1,7 @@
 import { writable, derived, get } from 'svelte/store';
 import { ethers } from 'ethers';
 import { getSupportedNetworks, getNetworkByChainId } from '../config/networks';
+import { parseClaimData } from '../utils/claimParser';
 
 // Constants
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -315,18 +316,7 @@ function createMultiChainStore() {
         const claim = await chainData.contract.getClaim(address);
         return { 
           success: true, 
-          claim: {
-            claimant: claim[0],
-            name: claim[1],
-            avatar: claim[2],
-            bio: claim[3],
-            website: claim[4],
-            twitter: claim[5],
-            github: claim[6],
-            claimTime: claim[7],
-            isActive: claim[8],
-            isPrivate: claim[9]
-          }
+          claim: parseClaimData(claim)
         };
       } catch (error) {
         console.error(`Error getting claim from chain ${chainId}:`, error);
@@ -344,35 +334,25 @@ function createMultiChainStore() {
         .filter(([_, chainData]) => chainData.isAvailable && chainData.contract)
         .map(async ([chainId, chainData]) => {
           try {
-            const isClaimed = await chainData.contract.isClaimed(address);
-            if (isClaimed) {
-              const claim = await chainData.contract.getClaim(address);
+            const claim = await chainData.contract.getClaim(address);
+            const parsedClaim = parseClaimData(claim);
+            
+            // Check if claim is active (assuming claim[8] is isActive)
+            if (parsedClaim && parsedClaim.isActive) {
               return {
                 chainId: Number(chainId),
                 network: chainData.networkConfig.name,
-                claim: {
-                  claimant: claim[0],
-                  name: claim[1],
-                  avatar: claim[2],
-                  bio: claim[3],
-                  website: claim[4],
-                  twitter: claim[5],
-                  github: claim[6],
-                  claimTime: claim[7],
-                  isActive: claim[8],
-                  isPrivate: claim[9]
-                }
+                claim: parsedClaim
               };
             }
-            return null;
           } catch (error) {
-            console.error(`Error checking claim on ${chainData.networkConfig.name}:`, error);
-            return null;
+            console.error(`Error fetching claim on ${chainData.networkConfig.name}:`, error);
           }
+          return null;
         });
 
-      const results = await Promise.all(claimPromises);
-      return results.filter(Boolean);
+      const claims = await Promise.all(claimPromises);
+      return claims.filter(Boolean);
     },
 
     /**
