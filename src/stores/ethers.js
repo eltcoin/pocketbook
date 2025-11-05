@@ -1,6 +1,6 @@
 import { writable } from 'svelte/store';
 import { ethers } from 'ethers';
-import { getNetworkByChainId, isSupportedNetwork } from '../config/networks';
+import { getNetworkByChainId } from '../config/networks';
 
 function createEthersStore() {
   const { subscribe, set, update } = writable({
