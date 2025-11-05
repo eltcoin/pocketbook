@@ -46,6 +46,13 @@ function createMultiChainStore() {
     "function isFollowing(address _user1, address _user2) public view returns (bool)",
     "function areFriends(address _user1, address _user2) public view returns (bool)",
     "function hasPendingFriendRequest(address _from, address _to) public view returns (bool)",
+    // Reputation attestation functions
+    "function createAttestation(address _subject, uint8 _trustLevel, string memory _comment, bytes memory _signature) public",
+    "function revokeAttestation(address _subject) public",
+    "function getAttestation(address _attester, address _subject) public view returns (address attester, address subject, uint8 trustLevel, string memory comment, uint256 timestamp, bool isActive)",
+    "function getAttestationsGiven(address _attester) public view returns (address[] memory)",
+    "function getAttestationsReceived(address _subject) public view returns (address[] memory)",
+    "function getAttestationSignature(address _attester, address _subject) public view returns (bytes memory)",
     "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
     "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)",
     "event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
@@ -54,7 +61,10 @@ function createMultiChainStore() {
     "event UserUnfollowed(address indexed follower, address indexed followee, uint256 timestamp)",
     "event FriendRequestSent(address indexed from, address indexed to, uint256 timestamp)",
     "event FriendRequestAccepted(address indexed from, address indexed to, uint256 timestamp)",
-    "event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp)"
+    "event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp)",
+    "event AttestationCreated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp)",
+    "event AttestationRevoked(address indexed attester, address indexed subject, uint256 timestamp)",
+    "event AttestationUpdated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp)"
   ];
 
   // Event handlers

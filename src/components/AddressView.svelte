@@ -6,6 +6,7 @@
   import MultiChainView from './MultiChainView.svelte';
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
+  import Reputation from './Reputation.svelte';
 
   export let address;
   export let ensName = null;
@@ -233,6 +234,8 @@
       <SocialGraph {address} {isOwner} on:viewAddress={handleViewChange} />
 
       <SocialGraphExplorer {address} socialGraph={socialGraphData} on:viewAddress={handleViewChange} />
+
+      <Reputation {address} {isOwner} on:navigate={handleViewChange} />
 
       <MultiChainView {address} />
 
