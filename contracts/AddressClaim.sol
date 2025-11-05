@@ -5,7 +5,7 @@ pragma solidity ^0.8.0;
  * @title AddressClaim
  * @dev Decentralized identity and metadata management for Ethereum addresses
  * Users can claim addresses and attach signed metadata
- * Supports W3C DID (Decentralized Identifier) standard with did:ethr and did:pkh methods
+ * Supports W3C DID (Decentralized Identifier) standard with did:ethr method
  */
 contract AddressClaim {
     
