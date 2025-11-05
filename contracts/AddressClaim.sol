@@ -62,6 +62,16 @@ contract AddressClaim {
         DIDDocument didDocument;  // DID Document for this claim
     }
     
+    struct Attestation {
+        address attester;        // Address making the attestation
+        address subject;         // Address being attested to
+        uint8 trustLevel;        // Trust level (0-100)
+        string comment;          // Optional comment about the attestation
+        bytes signature;         // PGP-style signature of the attestation
+        uint256 timestamp;       // When the attestation was made
+        bool isActive;           // Whether the attestation is still valid
+    }
+    
     // Mapping from address to claim
     mapping(address => Claim) public claims;
     
@@ -73,6 +83,15 @@ contract AddressClaim {
     
     // Social graph mappings
     mapping(address => SocialGraph) private socialGraphs;
+    
+    // Reputation attestations: attester => subject => Attestation
+    mapping(address => mapping(address => Attestation)) public attestations;
+    
+    // Track all attestations given by an address
+    mapping(address => address[]) private attestationsGiven;
+    
+    // Track all attestations received by an address
+    mapping(address => address[]) private attestationsReceived;
     
     // Events
     event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp);
@@ -91,6 +110,9 @@ contract AddressClaim {
     event FriendRequestSent(address indexed from, address indexed to, uint256 timestamp);
     event FriendRequestAccepted(address indexed from, address indexed to, uint256 timestamp);
     event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp);
+    event AttestationCreated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp);
+    event AttestationRevoked(address indexed attester, address indexed subject, uint256 timestamp);
+    event AttestationUpdated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp);
     
     /**
      * @dev Claim an address with signed metadata
@@ -801,5 +823,123 @@ contract AddressClaim {
             }
         }
         return false;
+    }
+    
+    // ============ Reputation Attestation Functions ============
+    
+    /**
+     * @dev Create or update a trust attestation for another user
+     * @param _subject Address being attested to
+     * @param _trustLevel Trust level (0-100)
+     * @param _comment Optional comment about the attestation
+     * @param _signature PGP-style signature of the attestation
+     */
+    function createAttestation(
+        address _subject,
+        uint8 _trustLevel,
+        string memory _comment,
+        bytes memory _signature
+    ) public {
+        require(isClaimed[msg.sender], "Attester address not claimed");
+        require(isClaimed[_subject], "Subject address not claimed");
+        require(msg.sender != _subject, "Cannot attest to yourself");
+        require(_trustLevel <= 100, "Trust level must be 0-100");
+        
+        bool isUpdate = attestations[msg.sender][_subject].isActive;
+        
+        // Create or update attestation
+        attestations[msg.sender][_subject] = Attestation({
+            attester: msg.sender,
+            subject: _subject,
+            trustLevel: _trustLevel,
+            comment: _comment,
+            signature: _signature,
+            timestamp: block.timestamp,
+            isActive: true
+        });
+        
+        // Track attestations if new
+        if (!isUpdate) {
+            attestationsGiven[msg.sender].push(_subject);
+            attestationsReceived[_subject].push(msg.sender);
+            emit AttestationCreated(msg.sender, _subject, _trustLevel, block.timestamp);
+        } else {
+            emit AttestationUpdated(msg.sender, _subject, _trustLevel, block.timestamp);
+        }
+    }
+    
+    /**
+     * @dev Revoke a trust attestation
+     * @param _subject Address to revoke attestation for
+     */
+    function revokeAttestation(address _subject) public {
+        require(attestations[msg.sender][_subject].isActive, "No active attestation found");
+        
+        attestations[msg.sender][_subject].isActive = false;
+        
+        // Remove from tracking arrays
+        _removeFromArray(attestationsGiven[msg.sender], _subject);
+        _removeFromArray(attestationsReceived[_subject], msg.sender);
+        
+        emit AttestationRevoked(msg.sender, _subject, block.timestamp);
+    }
+    
+    /**
+     * @dev Get attestation from attester to subject
+     * @param _attester Address of the attester
+     * @param _subject Address of the subject
+     * @return attester Address making the attestation
+     * @return subject Address being attested to
+     * @return trustLevel Trust level (0-100)
+     * @return comment Comment about the attestation
+     * @return timestamp When the attestation was made
+     * @return isActive Whether the attestation is active
+     */
+    function getAttestation(address _attester, address _subject) public view returns (
+        address attester,
+        address subject,
+        uint8 trustLevel,
+        string memory comment,
+        uint256 timestamp,
+        bool isActive
+    ) {
+        Attestation memory att = attestations[_attester][_subject];
+        return (
+            att.attester,
+            att.subject,
+            att.trustLevel,
+            att.comment,
+            att.timestamp,
+            att.isActive
+        );
+    }
+    
+    /**
+     * @dev Get all attestations given by an address
+     * @param _attester Address of the attester
+     * @return Array of addresses that have been attested to
+     */
+    function getAttestationsGiven(address _attester) public view returns (address[] memory) {
+        return attestationsGiven[_attester];
+    }
+    
+    /**
+     * @dev Get all attestations received by an address
+     * @param _subject Address of the subject
+     * @return Array of addresses that have given attestations
+     */
+    function getAttestationsReceived(address _subject) public view returns (address[] memory) {
+        return attestationsReceived[_subject];
+    }
+    
+    /**
+     * @dev Get signature for an attestation
+     * @param _attester Address of the attester
+     * @param _subject Address of the subject
+     * @return Signature bytes
+     */
+    function getAttestationSignature(address _attester, address _subject) public view returns (bytes memory) {
+        require(attestations[_attester][_subject].isActive, "No active attestation found");
+        return attestations[_attester][_subject].signature;
     }
 }
