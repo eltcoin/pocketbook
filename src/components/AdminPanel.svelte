@@ -1,10 +1,12 @@
 <script>
   import { createEventDispatcher } from 'svelte';
-  import { multiChainStore, availableChains } from '../stores/multichain';
+  import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { toastStore } from '../stores/toast';
   import { ethers } from 'ethers';
   import Icon from './Icon.svelte';
+  import { addressClaimABI, addressClaimBytecode, hasDeployableArtifact } from '../config/addressClaimArtifact';
+  import { getSupportedNetworks } from '../config/networks';
 
   const dispatch = createEventDispatcher();
 
@@ -14,21 +16,7 @@
   let deploying = false;
   let selectedChain = null;
   let deployedContracts = [];
-  let availableChainsList = [];
-
-  // Contract bytecode and ABI (simplified - would come from compilation)
-  const contractBytecode = ""; // Would be filled with actual bytecode
-  const contractABI = [
-    "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate) public",
-    "function updateMetadata(string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, bool _isPrivate) public",
-    "function getClaim(address _address) public view returns (address claimant, string memory name, string memory avatar, string memory bio, string memory website, string memory twitter, string memory github, uint256 claimTime, bool isActive, bool isPrivate)",
-    "function isClaimed(address) public view returns (bool)",
-    "function addViewer(address _viewer) public",
-    "function removeViewer(address _viewer) public",
-    "function revokeClaim() public",
-    "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
-    "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)"
-  ];
+  let availableChainsList = getSupportedNetworks();
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -39,9 +27,6 @@
     address = value.primaryAddress;
   });
 
-  availableChains.subscribe(value => {
-    availableChainsList = value;
-  });
 
   async function deployContract() {
     if (!connected) {
@@ -54,29 +39,75 @@
       return;
     }
 
+    if (!window.ethereum) {
+      toastStore.show('No Ethereum provider found. Please install MetaMask.', 'error');
+      return;
+    }
+
+    if (!hasDeployableArtifact()) {
+      toastStore.show('Contract bytecode not configured. Please compile the contract and set VITE_ADDRESS_CLAIM_BYTECODE.', 'error');
+      return;
+    }
+
     deploying = true;
 
     try {
       // Get signer for the current chain
       const provider = new ethers.BrowserProvider(window.ethereum);
+      const chainIdHex = selectedChain.chainIdHex || ethers.toBeHex(selectedChain.chainId);
+
+      try {
+        const network = await provider.getNetwork();
+        if (Number(network.chainId) !== Number(selectedChain.chainId)) {
+          await provider.send('wallet_switchEthereumChain', [{ chainId: chainIdHex }]);
+        }
+      } catch (switchError) {
+        if (switchError.code === 4902 && selectedChain.rpcUrl) {
+          try {
+            await provider.send('wallet_addEthereumChain', [{
+              chainId: chainIdHex,
+              chainName: selectedChain.name,
+              rpcUrls: [selectedChain.rpcUrl],
+              nativeCurrency: selectedChain.nativeCurrency,
+              blockExplorerUrls: selectedChain.blockExplorer ? [selectedChain.blockExplorer] : undefined
+            }]);
+          } catch (addError) {
+            throw new Error(`Please add ${selectedChain.name} network in MetaMask.`);
+          }
+        } else {
+          throw new Error(`Please switch your wallet to ${selectedChain.name}.`);
+        }
+      }
+
       const signer = await provider.getSigner();
+      toastStore.clear();
+      toastStore.show(`Review deployment transaction in MetaMask for ${selectedChain.name}...`, 'info', 0);
 
-      // In a real implementation, this would deploy the actual contract
-      // For now, we'll simulate the deployment
-      toastStore.show(`Deploying contract to ${selectedChain.name}...`, 'info', 0);
+      const factory = new ethers.ContractFactory(addressClaimABI, addressClaimBytecode, signer);
+      const contract = await factory.deploy();
 
-      // Simulate deployment delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const deploymentTx = contract.deploymentTransaction();
+      toastStore.clear();
 
-      // Simulate deployed contract address
-      const mockAddress = `0x${Math.random().toString(16).substring(2, 42)}`;
+      if (!deploymentTx) {
+        throw new Error('Deployment transaction not created.');
+      }
+
+      toastStore.show('Waiting for deployment confirmation...', 'info', 0);
+
+      const txHash = deploymentTx.hash;
+      const receipt = await deploymentTx.wait();
+      await contract.waitForDeployment();
+      const deployedAddress = await contract.getAddress();
 
       deployedContracts = [...deployedContracts, {
         chainId: selectedChain.chainId,
         network: selectedChain.name,
-        address: mockAddress,
+        address: deployedAddress,
         deployedAt: new Date().toISOString(),
-        deployer: address
+        deployer: address,
+        transactionHash: txHash,
+        blockExplorer: selectedChain.blockExplorer
       }];
 
       toastStore.clear();
@@ -86,7 +117,8 @@
     } catch (error) {
       console.error('Deployment error:', error);
       toastStore.clear();
-      toastStore.show(`Deployment failed: ${error.message}`, 'error');
+      const errorMessage = error?.info?.error?.message || error?.shortMessage || error?.message || 'Unknown deployment error';
+      toastStore.show(`Deployment failed: ${errorMessage}`, 'error');
     } finally {
       deploying = false;
     }
@@ -211,6 +243,34 @@
                     </button>
                   </div>
                 </div>
+
+                {#if contract.transactionHash}
+                  <div class="contract-tx">
+                    <label>Transaction Hash:</label>
+                    <div class="tx-row">
+                      <code>
+                        {#if contract.blockExplorer}
+                          <a 
+                            href={`${contract.blockExplorer}/tx/${contract.transactionHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {contract.transactionHash.substring(0, 10)}...{contract.transactionHash.slice(-8)}
+                          </a>
+                        {:else}
+                          {contract.transactionHash.substring(0, 10)}...{contract.transactionHash.slice(-8)}
+                        {/if}
+                      </code>
+                      <button 
+                        class="btn-copy" 
+                        on:click={() => copyToClipboard(contract.transactionHash)}
+                        title="Copy transaction hash"
+                      >
+                        📋
+                      </button>
+                    </div>
+                  </div>
+                {/if}
 
                 <div class="contract-info">
                   <div class="info-row">
@@ -540,11 +600,13 @@
   }
 
   .contract-address,
+  .contract-tx,
   .env-var {
     margin-bottom: 1rem;
   }
 
   .contract-address label,
+  .contract-tx label,
   .env-var label {
     display: block;
     margin-bottom: 0.5rem;
@@ -554,11 +616,13 @@
   }
 
   .admin-panel.dark .contract-address label,
+  .admin-panel.dark .contract-tx label,
   .admin-panel.dark .env-var label {
     color: #94a3b8;
   }
 
   .address-row,
+  .tx-row,
   .env-row {
     display: flex;
     align-items: center;

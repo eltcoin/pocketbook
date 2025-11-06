@@ -182,7 +182,6 @@ contract AddressClaim {
             emit IPFSMetadataStored(_address, _ipfsCID, block.timestamp);
         }
     }
-    }
     
     /**
      * @dev Internal function to initialize DID Document

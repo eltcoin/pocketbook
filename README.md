@@ -20,6 +20,14 @@ npm run dev
 
 Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 
+### 🔨 Compile the Contract
+
+```bash
+npm run compile:contract
+```
+
+This command compiles `contracts/AddressClaim.sol`, writes the artifact to `build/AddressClaim.json`, and updates `VITE_ADDRESS_CLAIM_BYTECODE` in your local `.env` file so the admin deploy panel can access the bytecode. Ensure you have Solidity `0.8.x` available (the script fetches it automatically when online).
+
 ### ✨ Features
 
 - 🎯 **Address Claiming** - Prove ownership and attach verified metadata to any address
