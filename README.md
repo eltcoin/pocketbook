@@ -30,7 +30,7 @@ Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 - 🔗 **Cross-Chain Identity** - View and manage claims across multiple blockchain networks
 - 📦 **IPFS Storage** - Decentralized metadata storage with DID-based content routing
 - 🔒 **Privacy Controls** - Choose what's public and whitelist private viewers
-- 🌓 **Dark Mode** - Beautiful UI with light and dark themes
+- 🌓 **Modern UI** - Polished interface with animated backgrounds, modern icons, and vibrant accent colors
 - 💼 **Contract Support** - Claim smart contract and token addresses
 - 🔌 **Interoperability** - DID-based identity works across decentralized platforms
 - 👥 **Social Graph** - Follow/unfollow users, send friend requests, and build your decentralized network
@@ -71,21 +71,21 @@ See [docs/REPUTATION_SYSTEM.md](./docs/REPUTATION_SYSTEM.md) for reputation syst
 
 ### 📸 Screenshots
 
-Pocketbook features a modern, professional design with a clean card-based interface and beautiful light/dark modes.
+Pocketbook features a modern, polished design with animated backgrounds, professional SVG icons, and vibrant accent colors that bring the interface to life.
 
 #### Explorer View - Light Mode
-Browse and discover claimed addresses with a modern, clean interface featuring neutral slate colors and subtle shadows.
+Browse and discover claimed addresses with animated star field background, gradient statistics, and modern icon system.
 
-![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/41145dfb-1c68-4240-ba8e-2afacceecdf6)
+![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/893446e1-8b43-4df8-8dfc-a07557a88e09)
 
-*Modern card-based explorer with statistics dashboard, search functionality, and recent claims feed*
+*Modern interface featuring animated 3D star field, blue-to-purple gradient statistics, and glass-morphism effects on cards*
 
 #### Explorer View - Dark Mode
-Comfortable dark theme with enhanced contrast and professional styling.
+Stunning dark theme with enhanced star visibility and accent-colored interactive elements.
 
-![Dark Mode Explorer](https://github.com/user-attachments/assets/eaa8beb0-32bb-4c75-85d6-96378d704202)
+![Dark Mode Explorer](https://github.com/user-attachments/assets/6fd1a223-b63d-44fd-adec-f66978cc0997)
 
-*Dark mode featuring #0f172a background with #1e293b cards and subtle borders for excellent readability*
+*Dark mode with brighter stars, semi-transparent cards with backdrop blur, and vibrant blue (#3b82f6) accent colors*
 
 #### Claim Address Page - Dark Mode
 Streamlined claiming interface with clear visual hierarchy and modern form design.
@@ -104,26 +104,42 @@ Professional admin interface for contract deployment across multiple networks.
 
 ### 🎨 Design System
 
-The UI features a modern design system with:
+The UI features a modern, polished design system with:
 
+- **Animated Background**: 
+  - Canvas-based 3D star field with 200 stars moving toward viewer
+  - Adaptive opacity: 30% in light mode, 80% in dark mode
+  - Subtle parallax depth effect for visual interest
+  
 - **Color Palette**: 
-  - Light mode: `#f8fafc` background with `#ffffff` cards
+  - **Accent Primary**: `#3b82f6` (Blue) - Buttons, CTAs, interactive elements
+  - **Accent Secondary**: `#8b5cf6` (Purple) - Feature highlights, decorative elements
+  - Light mode: `#f8fafc` background with semi-transparent cards
   - Dark mode: `#0f172a` background with `#1e293b` cards
-  - Clean slate-based neutral colors throughout
+  - Gradient effects: Blue-to-purple gradients on statistics
+  
+- **Icon System**:
+  - Custom SVG icon component with 12 Material Design-inspired icons
+  - Replaced all emoji icons with professional vector glyphs
+  - Crisp, scalable icons with proper accessibility attributes
+  - Icons: compass, id-card, tools, sun, moon, wallet, sign-out, globe, search, shield, network, lock, check
   
 - **Typography**: Modern Inter font family with refined weights (600-800) and improved spacing
 
 - **Components**: 
-  - Matte cards with 10-12px border radius
-  - Subtle shadows: `0 1px 3px` for elevation
+  - Glass-morphism cards with `backdrop-filter: blur(10px)`
+  - Semi-transparent backgrounds: `rgba(255, 255, 255, 0.8)` for light, `rgba(30, 41, 59, 0.8)` for dark
+  - Border radius: 10-12px for cards, 8px for buttons
+  - Shadows: `0 1px 3px` for cards, `0 4px 12px rgba(59, 130, 246, 0.3)` on hover
   - Smooth hover effects with `translateY(-2px)` transforms
-  - Solid, accessible buttons with proper contrast
+  - Accent-colored borders on interactive elements
   
 - **Visual Effects**:
-  - No glassmorphism or blur effects
-  - Clean borders (`1px solid`) with proper color hierarchy
-  - Professional spacing and layout
+  - Gradient text effects on statistics using `background-clip: text`
+  - Color-coded hover states with accent borders
+  - Smooth transitions and animations throughout
   - Enhanced monospace font stack for addresses
+  - Professional spacing and visual hierarchy
 
 ---
 

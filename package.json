@@ -21,7 +21,6 @@
     "vite": "^7.1.12"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-free": "^7.1.0",
     "@helia/json": "^5.0.3",
     "@helia/unixfs": "^6.0.3",
     "d3": "^7.9.0",
