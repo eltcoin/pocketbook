@@ -577,6 +577,7 @@ contract AddressClaim {
         require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
         
         // [L-02] Check for duplicate service IDs to maintain uniqueness
+        // Use storage reference for gas efficiency in loop and push operations
         ServiceEndpoint[] storage endpoints = claims[msg.sender].didDocument.serviceEndpoints;
         for (uint i = 0; i < endpoints.length; i++) {
             require(
