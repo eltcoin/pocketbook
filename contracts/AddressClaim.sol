@@ -2,12 +2,37 @@
 pragma solidity ^0.8.0;
 
 /**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ */
+abstract contract ReentrancyGuard {
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+
+/**
  * @title AddressClaim
  * @dev Decentralized identity and metadata management for Ethereum addresses
  * Users can claim addresses and attach signed metadata
  * Supports W3C DID (Decentralized Identifier) standard with did:ethr method
  */
-contract AddressClaim {
+contract AddressClaim is ReentrancyGuard {
     
     struct Metadata {
         string name;
@@ -142,13 +167,19 @@ contract AddressClaim {
         string memory _pgpSignature,
         bool _isPrivate,
         string memory _ipfsCID
-    ) public {
+    ) public nonReentrant {
         require(_address == msg.sender, "Can only claim your own address");
         require(!isClaimed[_address], "Address already claimed");
         require(bytes(_name).length > 0, "Name cannot be empty");
         
         // Create claim storage reference
         Claim storage newClaim = claims[_address];
+        
+        // [H-01] Clear allowedViewers array from any previous claim
+        while (newClaim.metadata.allowedViewers.length > 0) {
+            newClaim.metadata.allowedViewers.pop();
+        }
+        
         newClaim.claimant = msg.sender;
         newClaim.signature = _signature;
         newClaim.claimTime = block.timestamp;
@@ -192,6 +223,21 @@ contract AddressClaim {
         bytes memory _publicKey
     ) internal {
         DIDDocument storage doc = claims[_address].didDocument;
+        
+        // [L-01] Clear DID document arrays from any previous claim
+        while (doc.context.length > 0) {
+            doc.context.pop();
+        }
+        while (doc.publicKeys.length > 0) {
+            doc.publicKeys.pop();
+        }
+        while (doc.serviceEndpoints.length > 0) {
+            doc.serviceEndpoints.pop();
+        }
+        while (doc.alsoKnownAs.length > 0) {
+            doc.alsoKnownAs.pop();
+        }
+        
         doc.did = _did;
         doc.controller = msg.sender;
         doc.created = block.timestamp;
@@ -288,9 +334,18 @@ contract AddressClaim {
     /**
      * @dev Revoke claim
      */
-    function revokeClaim() public {
+    function revokeClaim() public nonReentrant {
         require(isClaimed[msg.sender], "Address not claimed");
         require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
+        
+        // [H-01] Clear allowedViewers array on revocation
+        while (claims[msg.sender].metadata.allowedViewers.length > 0) {
+            claims[msg.sender].metadata.allowedViewers.pop();
+        }
+        
+        // [M-01] Delete DID mapping to prevent stale DID resolution
+        string memory did = claims[msg.sender].didDocument.did;
+        delete didToAddress[did];
         
         claims[msg.sender].isActive = false;
         isClaimed[msg.sender] = false;
@@ -431,7 +486,19 @@ contract AddressClaim {
      */
     function getPublicKey(address _address) public view returns (bytes memory) {
         require(isClaimed[_address], "Address not claimed");
-        return claims[_address].metadata.publicKey;
+        
+        Claim memory claim = claims[_address];
+        
+        // [I-01] Check if caller can view private metadata
+        if (claim.metadata.isPrivate) {
+            require(
+                msg.sender == _address || 
+                isAllowedViewer(_address, msg.sender),
+                "Not authorized to view private metadata"
+            );
+        }
+        
+        return claim.metadata.publicKey;
     }
     
     /**
@@ -468,6 +535,15 @@ contract AddressClaim {
         if (v < 27) {
             v += 27;
         }
+        
+        // [I-02] Signature malleability check: validate v and s values
+        // v must be 27 or 28
+        require(v == 27 || v == 28, "Invalid signature 'v' value");
+        
+        // s must be in the lower half of the curve order to prevent malleability
+        // secp256k1 curve order n = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+        // s must be <= n/2
+        require(uint256(s) <= 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF5D576E7357A4501DDFE92F46681B20A0, "Invalid signature 's' value");
     }
     
     /**
@@ -525,6 +601,16 @@ contract AddressClaim {
         require(isClaimed[msg.sender], "Address not claimed");
         require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
         
+        // [L-02] Check for duplicate service IDs to maintain uniqueness
+        // Use storage reference for gas efficiency in loop and push operations
+        ServiceEndpoint[] storage endpoints = claims[msg.sender].didDocument.serviceEndpoints;
+        for (uint i = 0; i < endpoints.length; i++) {
+            require(
+                keccak256(bytes(endpoints[i].id)) != keccak256(bytes(_serviceId)),
+                "Service endpoint with this ID already exists"
+            );
+        }
+        
         ServiceEndpoint memory newService = ServiceEndpoint({
             id: _serviceId,
             serviceType: _serviceType,
@@ -532,7 +618,7 @@ contract AddressClaim {
             isActive: true
         });
         
-        claims[msg.sender].didDocument.serviceEndpoints.push(newService);
+        endpoints.push(newService);
         claims[msg.sender].didDocument.updated = block.timestamp;
         
         emit ServiceEndpointAdded(msg.sender, _serviceId, block.timestamp);
