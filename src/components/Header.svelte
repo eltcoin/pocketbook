@@ -3,6 +3,7 @@
   import { multiChainStore, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import NetworkSelector from './NetworkSelector.svelte';
+  import Icon from './Icon.svelte';
 
   const dispatch = createEventDispatcher();
   
@@ -56,19 +57,22 @@
 
     <nav>
       <button class="nav-btn" on:click={() => navigateTo('explorer')}>
-        Explorer
+        <Icon name="compass" size="1.125rem" />
+        <span>Explorer</span>
       </button>
       <button class="nav-btn" on:click={() => navigateTo('claim')}>
-        Claim Address
+        <Icon name="id-card" size="1.125rem" />
+        <span>Claim Address</span>
       </button>
       <button class="nav-btn admin-btn" on:click={() => navigateTo('admin')}>
-        🛠️ Admin
+        <Icon name="tools" size="1.125rem" />
+        <span>Admin</span>
       </button>
     </nav>
 
     <div class="controls">
       <button class="theme-toggle" on:click={toggleTheme} title="Toggle theme">
-        {darkMode ? '☀️' : '🌙'}
+        <Icon name={darkMode ? 'sun' : 'moon'} size="1.25rem" />
       </button>
       
       {#if connected}
@@ -76,12 +80,14 @@
         <div class="wallet-info">
           <span class="address">{shortenAddress(address)}</span>
           <button class="btn-disconnect" on:click={handleDisconnect}>
-            Disconnect
+            <Icon name="sign-out" size="1rem" />
+            <span>Disconnect</span>
           </button>
         </div>
       {:else}
         <button class="btn-connect" on:click={handleConnect}>
-          Connect Wallet
+          <Icon name="wallet" size="1.125rem" />
+          <span>Connect Wallet</span>
         </button>
       {/if}
     </div>
@@ -90,7 +96,8 @@
 
 <style>
   header {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
     border-bottom: 1px solid #e2e8f0;
     padding: 1rem 2rem;
     position: sticky;
@@ -100,7 +107,7 @@
   }
 
   header.dark {
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.95);
     border-bottom: 1px solid #334155;
   }
 
@@ -158,6 +165,9 @@
     cursor: pointer;
     border-radius: 10px;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   header.dark .nav-btn {
@@ -165,13 +175,13 @@
   }
 
   .nav-btn:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--accent-primary-light);
+    color: var(--accent-primary);
   }
 
   header.dark .nav-btn:hover {
-    background: #334155;
-    color: #f1f5f9;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-primary);
   }
 
   .admin-btn {
@@ -261,7 +271,7 @@
 
   .btn-connect,
   .btn-disconnect {
-    background: #0f172a;
+    background: var(--accent-primary);
     color: #ffffff;
     border: none;
     padding: 0.625rem 1.25rem;
@@ -270,20 +280,24 @@
     font-size: 0.9375rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   header.dark .btn-connect {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--accent-primary);
+    color: #ffffff;
   }
 
   .btn-connect:hover {
-    background: #1e293b;
+    background: var(--accent-primary-hover);
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 
   header.dark .btn-connect:hover {
-    background: #ffffff;
+    background: var(--accent-primary-hover);
   }
 
   .btn-disconnect {

@@ -4,6 +4,7 @@
   import { ethersStore } from '../stores/ethers';
   import { themeStore } from '../stores/theme';
   import { resolveAddressOrENS, isENSName } from '../utils/ens';
+  import Icon from './Icon.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -98,7 +99,10 @@
 
 <div class="explorer" class:dark={darkMode}>
   <div class="hero">
-    <h2>🔍 Blockchain Identity Explorer</h2>
+    <h2>
+      <Icon name="globe" size="2.5rem" />
+      <span>Blockchain Identity Explorer</span>
+    </h2>
     <p>Discover and explore claimed addresses on the decentralized human network</p>
   </div>
 
@@ -112,6 +116,7 @@
         disabled={loading}
       />
       <button class="btn-search" on:click={handleSearch} disabled={loading}>
+        <Icon name="search" size="1.125rem" />
         {loading ? 'Searching...' : 'Search'}
       </button>
     </div>
@@ -146,7 +151,10 @@
             <div class="claim-address">{shortenAddress(claim.address)}</div>
             <div class="claim-time">{timeAgo(claim.claimTime)}</div>
           </div>
-          <div class="claim-badge">✓ Claimed</div>
+          <div class="claim-badge">
+            <Icon name="check" size="0.875rem" />
+            Claimed
+          </div>
         </div>
       {/each}
     </div>
@@ -154,15 +162,24 @@
 
   <div class="info-section">
     <div class="info-card">
-      <h4>🔐 Own Your Identity</h4>
+      <h4>
+        <Icon name="shield-alt" size="1.5rem" />
+        <span>Own Your Identity</span>
+      </h4>
       <p>Claim your Ethereum address and attach verifiable metadata secured by cryptographic signatures.</p>
     </div>
     <div class="info-card">
-      <h4>🌐 Decentralized Network</h4>
+      <h4>
+        <Icon name="network-wired" size="1.5rem" />
+        <span>Decentralized Network</span>
+      </h4>
       <p>Build your web of trust on the blockchain. No central authority, total user sovereignty.</p>
     </div>
     <div class="info-card">
-      <h4>🔒 Privacy Control</h4>
+      <h4>
+        <Icon name="lock" size="1.5rem" />
+        <span>Privacy Control</span>
+      </h4>
       <p>Choose what's public and what's private. Whitelist viewers for sensitive information.</p>
     </div>
   </div>
@@ -189,6 +206,10 @@
     margin-bottom: 1rem;
     color: #0f172a;
     letter-spacing: -0.03em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
   }
 
   .explorer.dark .hero h2 {
@@ -263,6 +284,10 @@
     outline: none;
   }
 
+  .search-bar input:focus {
+    color: var(--accent-primary);
+  }
+
   .explorer.dark .search-bar input {
     color: #f1f5f9;
   }
@@ -272,7 +297,7 @@
   }
 
   .btn-search {
-    background: #0f172a;
+    background: var(--accent-primary);
     color: #ffffff;
     border: none;
     padding: 1rem 2rem;
@@ -281,20 +306,24 @@
     font-size: 0.9375rem;
     cursor: pointer;
     transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
   }
 
   .explorer.dark .btn-search {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--accent-primary);
+    color: #ffffff;
   }
 
   .btn-search:hover {
-    background: #1e293b;
+    background: var(--accent-primary-hover);
     transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
   }
 
   .explorer.dark .btn-search:hover {
-    background: #ffffff;
+    background: var(--accent-primary-hover);
   }
 
   .btn-search:disabled {
@@ -314,7 +343,8 @@
   }
 
   .stat-card {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
     padding: 2rem;
     border-radius: 12px;
     text-align: center;
@@ -324,7 +354,7 @@
   }
 
   .explorer.dark .stat-card {
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.8);
     border: 1px solid #334155;
   }
 
@@ -336,13 +366,12 @@
   .stat-value {
     font-size: 2.5rem;
     font-weight: 800;
-    color: #0f172a;
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
     margin-bottom: 0.5rem;
     letter-spacing: -0.02em;
-  }
-
-  .explorer.dark .stat-value {
-    color: #f1f5f9;
   }
 
   .stat-label {
@@ -378,7 +407,8 @@
   }
 
   .claim-card {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
     padding: 1.5rem;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
@@ -391,18 +421,18 @@
   }
 
   .explorer.dark .claim-card {
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.8);
     border: 1px solid #334155;
   }
 
   .claim-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
-    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+    border-color: var(--accent-primary);
   }
 
   .explorer.dark .claim-card:hover {
-    border-color: #475569;
+    border-color: var(--accent-primary);
   }
 
   .claim-avatar {
@@ -458,19 +488,22 @@
   }
 
   .claim-badge {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: var(--accent-primary-light);
+    color: var(--accent-primary);
     padding: 0.5rem 0.875rem;
     border-radius: 8px;
     font-size: 0.8125rem;
     font-weight: 600;
-    border: 1px solid #e2e8f0;
+    border: 1px solid var(--accent-primary);
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
   }
 
   .explorer.dark .claim-badge {
-    background: #334155;
-    color: #f1f5f9;
-    border: 1px solid #475569;
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--accent-primary);
+    border: 1px solid var(--accent-primary);
   }
 
   .info-section {
@@ -480,7 +513,8 @@
   }
 
   .info-card {
-    background: #ffffff;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
     padding: 2rem;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
@@ -489,24 +523,24 @@
   }
 
   .explorer.dark .info-card {
-    background: #1e293b;
+    background: rgba(30, 41, 59, 0.8);
     border: 1px solid #334155;
   }
 
   .info-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.15);
+    border-color: var(--accent-secondary);
   }
 
   .info-card h4 {
-    color: #0f172a;
+    color: var(--accent-secondary);
     margin-bottom: 1rem;
     font-size: 1.125rem;
     font-weight: 600;
-  }
-
-  .explorer.dark .info-card h4 {
-    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
   }
 
   .info-card p {

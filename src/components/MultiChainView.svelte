@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { multiChainStore, availableChains } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import Icon from './Icon.svelte';
 
   export let address;
 
@@ -51,7 +52,10 @@
 
 <div class="multichain-view" class:dark={darkMode}>
   <div class="multichain-header">
-    <h3>🌐 Multi-Chain Presence</h3>
+    <h3>
+      <Icon name="network-wired" size="1.5rem" />
+      <span>Multi-Chain Presence</span>
+    </h3>
     <p>This address exists on multiple blockchain networks</p>
   </div>
 
