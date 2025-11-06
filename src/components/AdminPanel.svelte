@@ -4,6 +4,7 @@
   import { themeStore } from '../stores/theme';
   import { toastStore } from '../stores/toast';
   import { ethers } from 'ethers';
+  import Icon from './Icon.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -124,7 +125,10 @@
 <div class="admin-panel" class:dark={darkMode}>
   <div class="admin-header">
     <button class="btn-back" on:click={goBack}>← Back to Explorer</button>
-    <h2>🛠️ Admin Panel - Contract Deployment</h2>
+    <h2>
+      <Icon name="tools" size="1.75rem" />
+      <span>Admin Panel - Contract Deployment</span>
+    </h2>
     <p>Deploy the AddressClaim contract to multiple blockchain networks</p>
   </div>
 
@@ -255,38 +259,60 @@
   .admin-header h2 {
     margin: 1rem 0 0.5rem 0;
     font-size: 2rem;
-    color: white;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .admin-panel.dark .admin-header h2 {
+    color: #f1f5f9;
   }
 
   .admin-header p {
-    color: rgba(255, 255, 255, 0.9);
+    color: #64748b;
     margin: 0;
   }
 
+  .admin-panel.dark .admin-header p {
+    color: #94a3b8;
+  }
+
   .btn-back {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
     padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
     margin-bottom: 1rem;
   }
 
+  .admin-panel.dark .btn-back {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #334155;
+  }
+
   .btn-back:hover {
-    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .warning-box {
-    background: rgba(255, 193, 7, 0.1);
-    border: 2px solid rgba(255, 193, 7, 0.5);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 2rem;
     display: flex;
     align-items: center;
     gap: 1.5rem;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .admin-panel.dark .warning-box {
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .warning-icon {
@@ -295,12 +321,17 @@
 
   .warning-box h3 {
     margin: 0 0 0.5rem 0;
-    color: #ffc107;
+    color: #ff9800;
+    font-weight: 600;
   }
 
   .warning-box p {
     margin: 0;
-    color: rgba(255, 255, 255, 0.9);
+    color: #64748b;
+  }
+
+  .admin-panel.dark .warning-box p {
+    color: #94a3b8;
   }
 
   .deployment-section {
@@ -310,23 +341,26 @@
   }
 
   .deploy-card {
-    background: white;
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .admin-panel.dark .deploy-card {
-    background: rgba(26, 26, 46, 0.95);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .deploy-card h3 {
     margin: 0 0 1.5rem 0;
-    color: #667eea;
+    color: #0f172a;
+    font-weight: 600;
   }
 
   .admin-panel.dark .deploy-card h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .form-group {
@@ -336,46 +370,51 @@
   .form-group label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #333;
+    font-weight: 500;
+    color: #0f172a;
   }
 
   .admin-panel.dark .form-group label {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   select {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid #ddd;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 1rem;
-    background: white;
-    color: #333;
+    background: #ffffff;
+    color: #0f172a;
   }
 
-  select.dark {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: rgba(167, 139, 250, 0.3);
-    color: #e0e0e0;
+  .admin-panel.dark select {
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .btn-deploy {
     width: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     border: none;
     padding: 1rem;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
+  .admin-panel.dark .btn-deploy {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
   .btn-deploy:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-deploy:disabled {
@@ -386,16 +425,19 @@
   .info-box {
     margin-top: 1.5rem;
     padding: 1rem;
-    background: rgba(33, 150, 243, 0.1);
-    border-left: 4px solid #2196f3;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #0f172a;
     border-radius: 8px;
     font-size: 0.9rem;
-    color: #333;
+    color: #64748b;
   }
 
   .admin-panel.dark .info-box {
-    background: rgba(33, 150, 243, 0.2);
-    color: #e0e0e0;
+    background: #334155;
+    border-color: #334155;
+    border-left-color: #f1f5f9;
+    color: #94a3b8;
   }
 
   .info-box ul {
@@ -404,14 +446,16 @@
   }
 
   .deployed-contracts {
-    background: white;
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .admin-panel.dark .deployed-contracts {
-    background: rgba(26, 26, 46, 0.95);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .contracts-header {
@@ -423,19 +467,20 @@
 
   .contracts-header h3 {
     margin: 0;
-    color: #667eea;
+    color: #0f172a;
+    font-weight: 600;
   }
 
   .admin-panel.dark .contracts-header h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .btn-export {
-    background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+    background: #4caf50;
     color: white;
     border: none;
     padding: 0.75rem 1.5rem;
-    border-radius: 8px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -443,7 +488,7 @@
 
   .btn-export:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
   }
 
   .contracts-grid {
@@ -453,15 +498,15 @@
   }
 
   .contract-card {
-    background: rgba(102, 126, 234, 0.05);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     padding: 1.5rem;
   }
 
   .contract-card.dark {
-    background: rgba(167, 139, 250, 0.05);
-    border-color: rgba(167, 139, 250, 0.2);
+    background: #334155;
+    border-color: #334155;
   }
 
   .contract-network {
@@ -472,20 +517,26 @@
   }
 
   .network-badge {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     padding: 0.5rem 1rem;
     border-radius: 8px;
     font-weight: 600;
   }
 
+  .contract-card.dark .network-badge {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
   .chain-id {
-    color: #666;
+    color: #64748b;
     font-size: 0.9rem;
+    font-weight: 500;
   }
 
   .admin-panel.dark .chain-id {
-    color: #999;
+    color: #94a3b8;
   }
 
   .contract-address,
@@ -497,14 +548,14 @@
   .env-var label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 600;
+    font-weight: 500;
     font-size: 0.9rem;
-    color: #666;
+    color: #64748b;
   }
 
   .admin-panel.dark .contract-address label,
   .admin-panel.dark .env-var label {
-    color: #999;
+    color: #94a3b8;
   }
 
   .address-row,
@@ -516,23 +567,25 @@
 
   code {
     flex: 1;
-    background: rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 0.5rem;
     border-radius: 6px;
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 0.85rem;
-    color: #333;
+    color: #0f172a;
     word-break: break-all;
   }
 
   .admin-panel.dark code {
-    background: rgba(255, 255, 255, 0.05);
-    color: #e0e0e0;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .btn-copy {
-    background: rgba(102, 126, 234, 0.1);
-    border: 1px solid rgba(102, 126, 234, 0.3);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 0.5rem;
     border-radius: 6px;
     cursor: pointer;
@@ -540,8 +593,13 @@
     transition: all 0.2s ease;
   }
 
+  .admin-panel.dark .btn-copy {
+    background: #334155;
+    border-color: #334155;
+  }
+
   .btn-copy:hover {
-    background: rgba(102, 126, 234, 0.2);
+    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1);
   }
 
   .contract-info {
@@ -558,20 +616,21 @@
   }
 
   .info-row .label {
-    color: #666;
+    color: #64748b;
+    font-weight: 500;
   }
 
   .admin-panel.dark .info-row .label {
-    color: #999;
+    color: #94a3b8;
   }
 
   .info-row .value {
-    color: #333;
-    font-family: 'Courier New', monospace;
+    color: #0f172a;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
   }
 
   .admin-panel.dark .info-row .value {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   @media (max-width: 768px) {

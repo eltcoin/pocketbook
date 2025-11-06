@@ -284,45 +284,62 @@
   }
 
   .btn-back {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
     padding: 0.75rem 1.5rem;
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     margin-bottom: 1rem;
     font-weight: 600;
     transition: all 0.2s ease;
   }
 
+  .claim-container.dark .btn-back {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #334155;
+  }
+
   .btn-back:hover {
-    background: rgba(255, 255, 255, 0.3);
     transform: translateX(-5px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .claim-header h2 {
-    color: white;
+    color: #0f172a;
     font-size: 2.5rem;
+    font-weight: 700;
     margin-bottom: 0.5rem;
   }
 
+  .claim-container.dark .claim-header h2 {
+    color: #f1f5f9;
+  }
+
   .claim-header p {
-    color: rgba(255, 255, 255, 0.9);
+    color: #64748b;
     font-size: 1.2rem;
   }
 
+  .claim-container.dark .claim-header p {
+    color: #94a3b8;
+  }
+
   .warning-box {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 2rem;
-    border-radius: 16px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     gap: 1.5rem;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .claim-container.dark .warning-box {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .warning-icon {
@@ -332,55 +349,65 @@
   .warning-box h3 {
     color: #ff9800;
     margin-bottom: 0.5rem;
+    font-weight: 600;
   }
 
   .warning-box p {
-    color: #666;
+    color: #64748b;
   }
 
   .claim-container.dark .warning-box p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .claim-form {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .claim-container.dark .claim-form {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .current-address {
     margin-bottom: 2rem;
     padding: 1rem;
-    background: rgba(102, 126, 234, 0.1);
-    border-radius: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+  }
+
+  .claim-container.dark .current-address {
+    background: #334155;
+    border-color: #334155;
   }
 
   .current-address label {
     display: block;
-    color: #666;
+    color: #64748b;
     font-size: 0.9rem;
+    font-weight: 500;
     margin-bottom: 0.5rem;
   }
 
   .claim-container.dark .current-address label {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .address-display {
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-weight: 600;
-    color: #667eea;
+    color: #0f172a;
     font-size: 1.1rem;
     word-break: break-all;
   }
 
   .claim-container.dark .address-display {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .ens-info {
@@ -389,15 +416,17 @@
     gap: 0.5rem;
     margin-top: 0.75rem;
     padding: 0.75rem;
-    background: rgba(139, 92, 246, 0.1);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
-    color: #8b5cf6;
+    color: #0f172a;
     font-size: 0.95rem;
   }
 
   .claim-container.dark .ens-info {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .ens-icon {
@@ -409,7 +438,7 @@
   }
 
   .ens-text strong {
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
   }
 
   .form-group {
@@ -425,12 +454,12 @@
   label {
     display: block;
     margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #333;
+    font-weight: 500;
+    color: #0f172a;
   }
 
   .claim-container.dark label {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   input[type="text"],
@@ -438,26 +467,31 @@
   textarea {
     width: 100%;
     padding: 0.75rem;
-    border: 2px solid #e0e0e0;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     font-size: 1rem;
     transition: all 0.2s ease;
-    background: white;
-    color: #333;
+    background: #ffffff;
+    color: #0f172a;
   }
 
   .claim-container.dark input[type="text"],
   .claim-container.dark input[type="url"],
   .claim-container.dark textarea {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(255, 255, 255, 0.1);
-    color: #e0e0e0;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   input:focus,
   textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #0f172a;
+  }
+
+  .claim-container.dark input:focus,
+  .claim-container.dark textarea:focus {
+    border-color: #f1f5f9;
   }
 
   textarea {
@@ -469,11 +503,11 @@
     display: block;
     margin-top: 0.25rem;
     font-size: 0.875rem;
-    color: #666;
+    color: #64748b;
   }
 
   .claim-container.dark .form-hint {
-    color: #a0aec0;
+    color: #94a3b8;
   }
 
   .checkbox-group label {
@@ -513,21 +547,26 @@
 
   .btn-claim {
     width: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     border: none;
     padding: 1rem 2rem;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .claim-container.dark .btn-claim {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-claim:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-claim:disabled {
@@ -538,34 +577,37 @@
   .info-box {
     margin-top: 2rem;
     padding: 1.5rem;
-    background: rgba(102, 126, 234, 0.05);
-    border-radius: 12px;
-    border-left: 4px solid #667eea;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    border-left: 4px solid #0f172a;
   }
 
   .claim-container.dark .info-box {
-    background: rgba(167, 139, 250, 0.05);
-    border-left-color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    border-left-color: #f1f5f9;
   }
 
   .info-box strong {
-    color: #667eea;
+    color: #0f172a;
     display: block;
     margin-bottom: 0.5rem;
+    font-weight: 600;
   }
 
   .claim-container.dark .info-box strong {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .info-box ul {
     margin: 0;
     padding-left: 1.5rem;
-    color: #666;
+    color: #64748b;
   }
 
   .claim-container.dark .info-box ul {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .info-box li {

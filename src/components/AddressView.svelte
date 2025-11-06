@@ -7,6 +7,7 @@
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
   import Reputation from './Reputation.svelte';
+  import Icon from './Icon.svelte';
 
   export let address;
   export let ensName = null;
@@ -163,7 +164,7 @@
           <div class="links-grid">
             {#if claimData.website}
               <a href={claimData.website} target="_blank" rel="noopener" class="link-item">
-                <span class="link-icon">🌐</span>
+                <Icon name="globe" size="1.25rem" />
                 <span>Website</span>
               </a>
             {/if}
@@ -240,7 +241,10 @@
       <MultiChainView {address} />
 
       <div class="verification-box">
-        <h3>🔐 Cryptographic Verification</h3>
+        <h3>
+          <Icon name="shield-alt" size="1.5rem" />
+          <span>Cryptographic Verification</span>
+        </h3>
         <p>This claim is secured by a cryptographic signature proving ownership of the address.</p>
         <div class="verification-details">
           <div class="verification-item">
@@ -292,14 +296,14 @@
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🔐</span>
+            <Icon name="shield-alt" size="2rem" />
             <div>
               <strong>Cryptographically Secured</strong>
               <p>All claims are signed and verified on-chain</p>
             </div>
           </div>
           <div class="feature-item">
-            <span class="feature-icon">🌐</span>
+            <Icon name="globe" size="2rem" />
             <div>
               <strong>Decentralized Network</strong>
               <p>Build your web of trust without central authorities</p>
@@ -322,41 +326,54 @@
   }
 
   .btn-back {
-    background: rgba(255, 255, 255, 0.2);
-    color: white;
-    border: none;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
     padding: 0.75rem 1.5rem;
-    border-radius: 12px;
+    border-radius: 10px;
     cursor: pointer;
     font-weight: 600;
     transition: all 0.2s ease;
   }
 
+  .address-view.dark .btn-back {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #334155;
+  }
+
   .btn-back:hover {
-    background: rgba(255, 255, 255, 0.3);
     transform: translateX(-5px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .loading {
     text-align: center;
     padding: 4rem 2rem;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .address-view.dark .loading {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .spinner {
     width: 60px;
     height: 60px;
     margin: 0 auto 1rem;
-    border: 4px solid rgba(102, 126, 234, 0.2);
-    border-top-color: #667eea;
+    border: 4px solid #e2e8f0;
+    border-top-color: #0f172a;
     border-radius: 50%;
     animation: spin 1s linear infinite;
+  }
+
+  .address-view.dark .spinner {
+    border-color: #334155;
+    border-top-color: #f1f5f9;
   }
 
   @keyframes spin {
@@ -364,11 +381,11 @@
   }
 
   .loading p {
-    color: #666;
+    color: #64748b;
   }
 
   .address-view.dark .loading p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .claimed-profile {
@@ -378,14 +395,16 @@
   }
 
   .profile-card {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 2.5rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .address-view.dark .profile-card {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .profile-avatar {
@@ -394,10 +413,16 @@
     margin: 0 auto 1.5rem;
     border-radius: 20px;
     overflow: hidden;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #f1f5f9;
+    border: 2px solid #e2e8f0;
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .address-view.dark .profile-avatar {
+    background: #334155;
+    border-color: #334155;
   }
 
   .profile-avatar img {
@@ -416,31 +441,34 @@
   }
 
   .profile-header h1 {
-    color: #333;
+    color: #0f172a;
     margin-bottom: 0.75rem;
     font-size: 2rem;
+    font-weight: 700;
   }
 
   .address-view.dark .profile-header h1 {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .address-badge {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(102, 126, 234, 0.1);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 0.5rem 1rem;
-    border-radius: 12px;
-    font-family: 'Courier New', monospace;
-    color: #667eea;
+    border-radius: 10px;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    color: #0f172a;
     font-weight: 600;
     margin-bottom: 0.5rem;
   }
 
   .address-view.dark .address-badge {
-    background: rgba(167, 139, 250, 0.1);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .verified-icon {
@@ -451,18 +479,20 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(139, 92, 246, 0.1);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 0.5rem 1rem;
-    border-radius: 12px;
-    color: #8b5cf6;
+    border-radius: 10px;
+    color: #0f172a;
     font-weight: 600;
     margin-bottom: 0.5rem;
     margin-left: 0.5rem;
   }
 
   .address-view.dark .ens-badge {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .ens-icon {
@@ -470,7 +500,7 @@
   }
 
   .ens-name {
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
   }
 
   .owner-badge {
@@ -489,22 +519,23 @@
   }
 
   .profile-section h3 {
-    color: #667eea;
+    color: #0f172a;
     margin-bottom: 1rem;
     font-size: 1.2rem;
+    font-weight: 600;
   }
 
   .address-view.dark .profile-section h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .profile-section p {
-    color: #666;
+    color: #64748b;
     line-height: 1.6;
   }
 
   .address-view.dark .profile-section p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .links-grid {
@@ -518,22 +549,24 @@
     align-items: center;
     gap: 0.75rem;
     padding: 1rem;
-    background: rgba(102, 126, 234, 0.05);
-    border-radius: 12px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     text-decoration: none;
-    color: #667eea;
+    color: #0f172a;
     font-weight: 600;
     transition: all 0.2s ease;
   }
 
   .address-view.dark .link-item {
-    background: rgba(167, 139, 250, 0.05);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .link-item:hover {
-    background: rgba(102, 126, 234, 0.1);
     transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .link-icon {
@@ -549,29 +582,31 @@
     display: flex;
     justify-content: space-between;
     padding: 0.75rem;
-    background: rgba(0, 0, 0, 0.02);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
   }
 
   .address-view.dark .info-item {
-    background: rgba(255, 255, 255, 0.02);
+    background: #334155;
+    border-color: #334155;
   }
 
   .info-label {
-    color: #666;
-    font-weight: 600;
+    color: #64748b;
+    font-weight: 500;
   }
 
   .address-view.dark .info-label {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .info-value {
-    color: #333;
+    color: #0f172a;
   }
 
   .address-view.dark .info-value {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .status-active {
@@ -580,32 +615,32 @@
   }
 
   .did-section {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    background: #f1f5f9;
     padding: 1.5rem;
-    border-radius: 12px;
-    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
   }
 
   .address-view.dark .did-section {
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
-    border-color: rgba(102, 126, 234, 0.3);
+    background: #334155;
+    border-color: #334155;
   }
 
   .pgp-section {
-    background: rgba(245, 245, 245, 0.5);
+    background: #f1f5f9;
     padding: 1.5rem;
-    border-radius: 12px;
-    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
   }
 
   .address-view.dark .pgp-section {
-    background: rgba(30, 30, 50, 0.5);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #334155;
+    border-color: #334155;
   }
 
   .pgp-signature {
-    background: white;
-    border: 1px solid #e0e0e0;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
     padding: 1rem;
     margin-bottom: 0.75rem;
@@ -613,21 +648,21 @@
   }
 
   .address-view.dark .pgp-signature {
-    background: rgba(0, 0, 0, 0.3);
-    border-color: rgba(255, 255, 255, 0.1);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .pgp-signature pre {
     margin: 0;
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 0.85rem;
-    color: #333;
+    color: #0f172a;
     white-space: pre-wrap;
     word-break: break-all;
   }
 
   .address-view.dark .pgp-signature pre {
-    color: #a0aec0;
+    color: #94a3b8;
   }
 
   .pgp-description {
@@ -647,30 +682,32 @@
   }
 
   .did-value {
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 0.9rem;
-    background: rgba(0, 0, 0, 0.05);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 1rem;
     border-radius: 8px;
     word-break: break-all;
-    color: #667eea;
+    color: #0f172a;
     font-weight: 600;
   }
 
   .address-view.dark .did-value {
-    background: rgba(255, 255, 255, 0.05);
-    color: #8b9ff7;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .did-description {
     font-size: 0.9rem;
-    color: #666;
+    color: #64748b;
     line-height: 1.5;
     margin: 0;
   }
 
   .address-view.dark .did-description {
-    color: #aaa;
+    color: #94a3b8;
   }
 
 
@@ -684,63 +721,74 @@
     flex: 1;
     padding: 1rem;
     border: none;
-    border-radius: 12px;
+    border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
   }
 
   .btn-edit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
+  }
+
+  .address-view.dark .btn-edit {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-edit:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-manage {
-    background: rgba(102, 126, 234, 0.1);
-    color: #667eea;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #0f172a;
   }
 
   .address-view.dark .btn-manage {
-    background: rgba(167, 139, 250, 0.1);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .btn-manage:hover {
-    background: rgba(102, 126, 234, 0.2);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .verification-box {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .address-view.dark .verification-box {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .verification-box h3 {
-    color: #667eea;
+    color: #0f172a;
     margin-bottom: 1rem;
+    font-weight: 600;
   }
 
   .address-view.dark .verification-box h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .verification-box p {
-    color: #666;
+    color: #64748b;
     margin-bottom: 1.5rem;
   }
 
   .address-view.dark .verification-box p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .verification-details {
@@ -753,30 +801,32 @@
     display: flex;
     justify-content: space-between;
     padding: 0.75rem;
-    background: rgba(102, 126, 234, 0.05);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     border-radius: 8px;
   }
 
   .address-view.dark .verification-item {
-    background: rgba(167, 139, 250, 0.05);
+    background: #334155;
+    border-color: #334155;
   }
 
   .verification-label {
-    color: #666;
-    font-weight: 600;
+    color: #64748b;
+    font-weight: 500;
   }
 
   .address-view.dark .verification-label {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .verification-value {
-    font-family: 'Courier New', monospace;
-    color: #333;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    color: #0f172a;
   }
 
   .address-view.dark .verification-value {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .verified {
@@ -791,15 +841,17 @@
   }
 
   .unclaimed-card {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 3rem 2rem;
-    border-radius: 16px;
+    border-radius: 12px;
     text-align: center;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .address-view.dark .unclaimed-card {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .unclaimed-icon {
@@ -808,45 +860,50 @@
   }
 
   .unclaimed-card h2 {
-    color: #333;
+    color: #0f172a;
     margin-bottom: 1rem;
+    font-weight: 700;
   }
 
   .address-view.dark .unclaimed-card h2 {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .address-display {
-    font-family: 'Courier New', monospace;
-    background: rgba(102, 126, 234, 0.1);
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 1rem;
-    border-radius: 12px;
-    color: #667eea;
+    border-radius: 10px;
+    color: #0f172a;
     font-weight: 600;
     word-break: break-all;
     margin: 1.5rem 0;
   }
 
   .address-view.dark .address-display {
-    background: rgba(167, 139, 250, 0.1);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .ens-display {
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    background: rgba(139, 92, 246, 0.1);
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
     padding: 0.75rem 1.5rem;
-    border-radius: 12px;
-    color: #8b5cf6;
+    border-radius: 10px;
+    color: #0f172a;
     font-weight: 600;
     margin: 1rem 0 1.5rem;
   }
 
   .address-view.dark .ens-display {
-    background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
+    background: #334155;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .ens-display .ens-icon {
@@ -854,64 +911,72 @@
   }
 
   .ens-display .ens-name {
-    font-family: 'Courier New', monospace;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 1.1rem;
   }
 
   .unclaimed-card p {
-    color: #666;
+    color: #64748b;
     margin-bottom: 2rem;
   }
 
   .address-view.dark .unclaimed-card p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .btn-claim-now {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     border: none;
     padding: 1rem 2rem;
-    border-radius: 12px;
+    border-radius: 10px;
     font-size: 1.1rem;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .address-view.dark .btn-claim-now {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-claim-now:hover {
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .info-message {
-    color: #666;
+    color: #64748b;
     font-style: italic;
   }
 
   .address-view.dark .info-message {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   .what-is-claiming {
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     padding: 2rem;
-    border-radius: 16px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
   .address-view.dark .what-is-claiming {
-    background: rgba(26, 26, 46, 0.9);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .what-is-claiming h3 {
-    color: #667eea;
+    color: #0f172a;
     margin-bottom: 1.5rem;
+    font-weight: 600;
   }
 
   .address-view.dark .what-is-claiming h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .feature-list {
@@ -932,21 +997,22 @@
 
   .feature-item strong {
     display: block;
-    color: #333;
+    color: #0f172a;
     margin-bottom: 0.25rem;
+    font-weight: 600;
   }
 
   .address-view.dark .feature-item strong {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .feature-item p {
-    color: #666;
+    color: #64748b;
     margin: 0;
   }
 
   .address-view.dark .feature-item p {
-    color: #aaa;
+    color: #94a3b8;
   }
 
   @media (max-width: 768px) {

@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { multiChainStore, availableChains } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import Icon from './Icon.svelte';
 
   export let address;
 
@@ -51,7 +52,10 @@
 
 <div class="multichain-view" class:dark={darkMode}>
   <div class="multichain-header">
-    <h3>🌐 Multi-Chain Presence</h3>
+    <h3>
+      <Icon name="network-wired" size="1.5rem" />
+      <span>Multi-Chain Presence</span>
+    </h3>
     <p>This address exists on multiple blockchain networks</p>
   </div>
 
@@ -117,16 +121,17 @@
 
 <style>
   .multichain-view {
-    background: white;
-    border-radius: 16px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
     padding: 2rem;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     transition: all 0.3s ease;
   }
 
   .multichain-view.dark {
-    background: rgba(26, 26, 46, 0.95);
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    background: #1e293b;
+    border-color: #334155;
   }
 
   .multichain-header {
@@ -137,20 +142,21 @@
   .multichain-header h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.5rem;
-    color: #667eea;
+    font-weight: 700;
+    color: #0f172a;
   }
 
   .multichain-view.dark .multichain-header h3 {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .multichain-header p {
     margin: 0;
-    color: #666;
+    color: #64748b;
   }
 
   .multichain-view.dark .multichain-header p {
-    color: #999;
+    color: #94a3b8;
   }
 
   .loading-container {
@@ -159,13 +165,18 @@
   }
 
   .spinner {
-    border: 3px solid rgba(102, 126, 234, 0.2);
-    border-top-color: #667eea;
+    border: 3px solid #e2e8f0;
+    border-top-color: #0f172a;
     border-radius: 50%;
     width: 40px;
     height: 40px;
     animation: spin 1s linear infinite;
     margin: 0 auto 1rem;
+  }
+
+  .multichain-view.dark .spinner {
+    border-color: #334155;
+    border-top-color: #f1f5f9;
   }
 
   @keyframes spin {
@@ -180,26 +191,21 @@
   }
 
   .chain-card {
-    background: rgba(102, 126, 234, 0.05);
-    border: 1px solid rgba(102, 126, 234, 0.2);
-    border-radius: 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     padding: 1.5rem;
     transition: all 0.2s ease;
   }
 
   .chain-card:hover {
-    border-color: rgba(102, 126, 234, 0.4);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .chain-card.dark {
-    background: rgba(167, 139, 250, 0.05);
-    border-color: rgba(167, 139, 250, 0.2);
-  }
-
-  .chain-card.dark:hover {
-    border-color: rgba(167, 139, 250, 0.4);
-    box-shadow: 0 4px 12px rgba(167, 139, 250, 0.1);
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .chain-header {
@@ -208,11 +214,11 @@
     align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid #e2e8f0;
   }
 
   .multichain-view.dark .chain-header {
-    border-bottom-color: rgba(255, 255, 255, 0.1);
+    border-bottom-color: #334155;
   }
 
   .chain-badge {
@@ -227,12 +233,12 @@
 
   .chain-name {
     font-weight: 600;
-    color: #667eea;
+    color: #0f172a;
     font-size: 1.1rem;
   }
 
   .multichain-view.dark .chain-name {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   .claim-status {
@@ -259,22 +265,22 @@
   }
 
   .detail-row .label {
-    font-weight: 600;
-    color: #666;
+    font-weight: 500;
+    color: #64748b;
     min-width: 80px;
   }
 
   .multichain-view.dark .detail-row .label {
-    color: #999;
+    color: #94a3b8;
   }
 
   .detail-row .value {
-    color: #333;
+    color: #0f172a;
     flex: 1;
   }
 
   .multichain-view.dark .detail-row .value {
-    color: #e0e0e0;
+    color: #f1f5f9;
   }
 
   .detail-row .value.avatar {
@@ -284,11 +290,11 @@
   .no-claims {
     text-align: center;
     padding: 3rem;
-    color: #666;
+    color: #64748b;
   }
 
   .multichain-view.dark .no-claims {
-    color: #999;
+    color: #94a3b8;
   }
 
   .no-claims-icon {
@@ -302,32 +308,34 @@
 
   .no-claims .hint {
     font-size: 0.9rem;
-    color: #999;
+    color: #64748b;
   }
 
   .multichain-view.dark .no-claims .hint {
-    color: #666;
+    color: #94a3b8;
   }
 
   .chain-summary {
     text-align: center;
     padding: 1rem;
-    background: rgba(102, 126, 234, 0.05);
-    border-radius: 8px;
-    color: #666;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    color: #64748b;
   }
 
   .multichain-view.dark .chain-summary {
-    background: rgba(167, 139, 250, 0.05);
-    color: #999;
+    background: #334155;
+    border-color: #334155;
+    color: #94a3b8;
   }
 
   .chain-summary strong {
-    color: #667eea;
+    color: #0f172a;
   }
 
   .multichain-view.dark .chain-summary strong {
-    color: #a78bfa;
+    color: #f1f5f9;
   }
 
   @media (max-width: 768px) {

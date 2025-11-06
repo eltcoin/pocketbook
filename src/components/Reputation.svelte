@@ -440,15 +440,17 @@
 <style>
   .reputation-container {
     padding: 1.5rem;
-    background: white;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
     margin: 1rem 0;
   }
 
   .reputation-container.dark {
-    background: #1f2937;
-    color: #f3f4f6;
+    background: #1e293b;
+    border-color: #334155;
+    color: #f1f5f9;
   }
 
   .reputation-header {
@@ -474,13 +476,15 @@
     display: flex;
     gap: 2rem;
     padding: 2rem;
-    background: #f9fafb;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     margin-bottom: 2rem;
   }
 
   .dark .reputation-score {
-    background: #111827;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .score-circle {
@@ -497,7 +501,7 @@
     width: 120px;
     height: 120px;
     border-radius: 50%;
-    background: white;
+    background: #ffffff;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -505,7 +509,7 @@
   }
 
   .dark .score-inner {
-    background: #1f2937;
+    background: #1e293b;
   }
 
   .score-value {
@@ -592,24 +596,31 @@
 
   .attestation-form {
     padding: 1.5rem;
-    background: #f9fafb;
-    border-radius: 8px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     margin-bottom: 2rem;
   }
 
   .dark .attestation-form {
-    background: #111827;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .attestation-form h3 {
     margin: 0 0 0.5rem 0;
     font-size: 1.25rem;
+    font-weight: 600;
   }
 
   .form-description {
-    color: #6b7280;
+    color: #64748b;
     font-size: 0.875rem;
     margin-bottom: 1.5rem;
+  }
+
+  .dark .form-description {
+    color: #94a3b8;
   }
 
   .form-group {
@@ -715,14 +726,14 @@
 
   .attestation-card {
     padding: 1rem;
-    background: #f9fafb;
-    border-radius: 8px;
-    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
   }
 
   .dark .attestation-card {
-    background: #111827;
-    border-color: #374151;
+    background: #0f172a;
+    border-color: #334155;
   }
 
   .attestation-header {
@@ -735,10 +746,14 @@
   .address-link {
     background: none;
     border: none;
-    color: #3b82f6;
+    color: #0f172a;
     cursor: pointer;
     font-weight: 500;
     text-decoration: underline;
+  }
+
+  .dark .address-link {
+    color: #f1f5f9;
   }
 
   .trust-badge {
@@ -788,37 +803,51 @@
 
   .btn-primary {
     padding: 0.75rem 1.5rem;
-    background: #3b82f6;
-    color: white;
+    background: #0f172a;
+    color: #f1f5f9;
     border: none;
-    border-radius: 6px;
+    border-radius: 10px;
     cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .dark .btn-primary {
+    background: #f1f5f9;
+    color: #0f172a;
   }
 
   .btn-primary:hover {
-    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .btn-primary:disabled {
-    background: #9ca3af;
+    background: #94a3b8;
     cursor: not-allowed;
+    transform: none;
   }
 
   .btn-secondary {
     padding: 0.75rem 1.5rem;
-    background: #6b7280;
-    color: white;
-    border: none;
-    border-radius: 6px;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
     cursor: pointer;
-    font-weight: 500;
-    transition: background 0.2s;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+
+  .dark .btn-secondary {
+    background: #334155;
+    color: #f1f5f9;
+    border-color: #334155;
   }
 
   .btn-secondary:hover {
-    background: #4b5563;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
   }
 
   .empty-state {
