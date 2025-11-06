@@ -2,12 +2,37 @@
 pragma solidity ^0.8.0;
 
 /**
+ * @dev Contract module that helps prevent reentrant calls to a function.
+ *
+ * Inheriting from `ReentrancyGuard` will make the {nonReentrant} modifier
+ * available, which can be applied to functions to make sure there are no nested
+ * (reentrant) calls to them.
+ */
+abstract contract ReentrancyGuard {
+    uint256 private constant _NOT_ENTERED = 1;
+    uint256 private constant _ENTERED = 2;
+
+    uint256 private _status;
+
+    constructor() {
+        _status = _NOT_ENTERED;
+    }
+
+    modifier nonReentrant() {
+        require(_status != _ENTERED, "ReentrancyGuard: reentrant call");
+        _status = _ENTERED;
+        _;
+        _status = _NOT_ENTERED;
+    }
+}
+
+/**
  * @title AddressClaim
  * @dev Decentralized identity and metadata management for Ethereum addresses
  * Users can claim addresses and attach signed metadata
  * Supports W3C DID (Decentralized Identifier) standard with did:ethr method
  */
-contract AddressClaim {
+contract AddressClaim is ReentrancyGuard {
     
     struct Metadata {
         string name;
@@ -142,7 +167,7 @@ contract AddressClaim {
         string memory _pgpSignature,
         bool _isPrivate,
         string memory _ipfsCID
-    ) public {
+    ) public nonReentrant {
         require(_address == msg.sender, "Can only claim your own address");
         require(!isClaimed[_address], "Address already claimed");
         require(bytes(_name).length > 0, "Name cannot be empty");
@@ -309,7 +334,7 @@ contract AddressClaim {
     /**
      * @dev Revoke claim
      */
-    function revokeClaim() public {
+    function revokeClaim() public nonReentrant {
         require(isClaimed[msg.sender], "Address not claimed");
         require(claims[msg.sender].claimant == msg.sender, "Not the claimant");
         

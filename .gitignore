@@ -2,5 +2,7 @@
 node_modules/
 dist/
 build/
+cache/
+artifacts/
 .env
 .env.local
