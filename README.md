@@ -76,7 +76,7 @@ Pocketbook features a modern, polished design with animated backgrounds, profess
 #### Explorer View - Light Mode
 Browse and discover claimed addresses with animated star field background, gradient statistics, and modern icon system.
 
-![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/893446e1-8b43-4df8-8dfc-a07557a88e09)
+![Pocketbook Explorer Light Mode](https://github.com/user-attachments/assets/154866cc-80e0-4f03-94bc-9a42db0078bc)
 
 *Modern interface featuring animated 3D star field, blue-to-purple gradient statistics, and glass-morphism effects on cards*
 
@@ -87,20 +87,14 @@ Stunning dark theme with enhanced star visibility and accent-colored interactive
 
 *Dark mode with brighter stars, semi-transparent cards with backdrop blur, and vibrant blue (#3b82f6) accent colors*
 
-#### Claim Address Page - Dark Mode
-Streamlined claiming interface with clear visual hierarchy and modern form design.
+#### Explorer View - Light Mode (Alternative View)
+Additional view showing the clean, professional interface with subtle star animations.
 
-![Claim Address Page Dark](https://github.com/user-attachments/assets/a6e824f9-14ad-49ab-8dfa-eef9de98225b)
+![Light Mode Alternative](https://github.com/user-attachments/assets/4153ddb5-d225-480d-974a-5903970d8efc)
 
-#### Claim Address Page - Light Mode
-Clean, professional claim interface with proper spacing and matte card design.
+*Light mode with visible animated stars in the background and clean card layouts*
 
-![Claim Address Page Light](https://github.com/user-attachments/assets/bbe8bca6-3faa-4221-b3a3-b74f7c5d87a5)
-
-#### Admin Panel
-Professional admin interface for contract deployment across multiple networks.
-
-![Admin Panel](https://github.com/user-attachments/assets/56ef8b1b-0bf4-40be-abae-1cb2d241c3bc)
+> **Note**: Screenshots show the wallet disconnected state. When a wallet is connected, the "Connect Wallet" button is replaced with a network selector dropdown and a wallet address display with disconnect option, all styled with the same modern icon system and accent colors.
 
 ### 🎨 Design System
 
