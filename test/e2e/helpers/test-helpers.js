@@ -1,6 +1,9 @@
 const fs = require('fs');
 const path = require('path');
 
+// Constants
+const MOCK_SIGNATURE_LENGTH = 130; // 65 bytes * 2 hex chars (r + s + v)
+
 /**
  * Load deployment information from fixtures
  */
@@ -81,7 +84,7 @@ async function setupWallet(page, accountIndex = 0) {
           
           case 'personal_sign':
             // Simple mock signature - in real tests, we'd need proper signing
-            return '0x' + '0'.repeat(130);
+            return '0x' + '0'.repeat(MOCK_SIGNATURE_LENGTH);
           
           case 'eth_sendTransaction':
             // Mock transaction hash

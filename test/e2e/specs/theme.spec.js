@@ -82,11 +82,13 @@ test.describe('Theme Switching', () => {
     await toggleTheme(page);
     
     // Verify header has dark styling
+    // slate-900 RGB color (15, 23, 42) is the dark mode background
+    const SLATE_900_RGB = '15, 23, 42';
     const header = page.locator('header');
-    const headerHasDark = await header.evaluate(el => 
+    const headerHasDark = await header.evaluate((el, darkColor) => 
       el.classList.contains('dark') || 
-      getComputedStyle(el).backgroundColor.includes('15, 23, 42') // slate-900
-    );
+      getComputedStyle(el).backgroundColor.includes(darkColor)
+    , SLATE_900_RGB);
     
     await takeScreenshot(page, 'theme-dark-all-components', testInfo);
   });

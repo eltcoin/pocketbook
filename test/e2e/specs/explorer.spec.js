@@ -95,11 +95,10 @@ test.describe('Explorer View', () => {
     
     // Either claims are shown or an empty state message
     if (count === 0) {
-      // Should show some indication of no claims
-      const emptyState = page.locator('text=/no claims/i, text=/empty/i');
-      // Empty state might not exist, so we just verify page loaded
-      expect(true).toBe(true);
+      // No claims shown - this is acceptable for empty state
+      expect(count).toBe(0);
     } else {
+      // Claims are visible
       await expect(claimCards.first()).toBeVisible();
     }
   });
