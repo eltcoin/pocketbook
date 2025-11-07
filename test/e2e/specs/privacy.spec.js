@@ -3,8 +3,7 @@ const {
   setupWallet, 
   takeScreenshot, 
   connectWallet,
-  navigateTo,
-  waitForElement 
+  navigateTo
 } = require('../helpers/test-helpers');
 
 /**

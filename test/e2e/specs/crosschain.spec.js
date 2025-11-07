@@ -2,8 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { 
   setupWallet, 
   takeScreenshot, 
-  connectWallet,
-  getContractInfo 
+  connectWallet
 } = require('../helpers/test-helpers');
 
 /**
@@ -63,8 +62,6 @@ test.describe('Cross-Chain Testing', () => {
     const contractInfo = page.locator('text=/contract.*0x[a-fA-F0-9]{40}/i').first();
     
     if (await contractInfo.count() > 0) {
-      const firstContract = await contractInfo.textContent();
-      
       // Switch network
       const networkSelector = page.locator('select').first();
       if (await networkSelector.count() > 0) {

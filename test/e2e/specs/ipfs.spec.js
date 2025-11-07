@@ -2,8 +2,7 @@ const { test, expect } = require('@playwright/test');
 const { 
   setupWallet, 
   takeScreenshot, 
-  connectWallet,
-  waitForElement 
+  connectWallet
 } = require('../helpers/test-helpers');
 
 /**

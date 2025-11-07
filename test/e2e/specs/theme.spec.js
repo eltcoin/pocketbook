@@ -3,8 +3,7 @@ const {
   setupWallet, 
   takeScreenshot, 
   connectWallet, 
-  toggleTheme,
-  waitForElement 
+  toggleTheme
 } = require('../helpers/test-helpers');
 
 /**
@@ -89,6 +88,9 @@ test.describe('Theme Switching', () => {
       el.classList.contains('dark') || 
       getComputedStyle(el).backgroundColor.includes(darkColor)
     , SLATE_900_RGB);
+    
+    // Verify dark theme is applied to header
+    expect(headerHasDark).toBe(true);
     
     await takeScreenshot(page, 'theme-dark-all-components', testInfo);
   });
