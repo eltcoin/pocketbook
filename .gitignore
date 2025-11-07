@@ -6,3 +6,10 @@ cache/
 artifacts/
 .env
 .env.local
+
+# Playwright
+test-results/
+playwright-report/
+.playwright/
+.hardhat-node.pid
+# Note: test/e2e/fixtures/deployment.json is tracked for testing purposes
