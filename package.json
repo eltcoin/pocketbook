@@ -12,7 +12,12 @@
     "preview": "vite preview",
     "compile:contract": "node scripts/compile-contract.js",
     "test": "hardhat test",
-    "test:security": "hardhat test test/hardhat/AddressClaim.security.test.js"
+    "test:security": "hardhat test test/hardhat/AddressClaim.security.test.js",
+    "test:e2e": "playwright test",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:debug": "playwright test --debug"
   },
   "keywords": [],
   "author": "",
@@ -20,6 +25,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-toolbox": "^6.1.0",
     "@openzeppelin/contracts": "^5.4.0",
+    "@playwright/test": "^1.56.1",
     "@sveltejs/vite-plugin-svelte": "^6.2.1",
     "hardhat": "^2.27.0",
     "solc": "^0.8.0",
