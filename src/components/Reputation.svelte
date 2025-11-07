@@ -18,6 +18,8 @@
   let loading = true;
   let userAddress = null;
   let contract = null;
+  let primarySigner = null;
+  let primaryChainId = null;
   
   // Reputation data
   let reputationScore = null;
@@ -41,8 +43,20 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
+    primarySigner = value.primarySigner || null;
+    primaryChainId = value.primaryChainId || null;
     contract = value.chains?.[value.primaryChainId]?.contract || null;
   });
+
+  const toNumber = (value, fallback = 0) => {
+    if (typeof value === 'bigint') {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : fallback;
+    }
+
+    const num = Number(value ?? fallback);
+    return Number.isFinite(num) ? num : fallback;
+  };
 
   onMount(async () => {
     await loadReputationData();
@@ -60,9 +74,9 @@
             return {
               attester: att[0],
               subject: att[1],
-              trustLevel: att[2],
+              trustLevel: toNumber(att[2]),
               comment: att[3],
-              timestamp: att[4],
+              timestamp: toNumber(att[4]),
               isActive: att[5]
             };
           })
@@ -77,9 +91,9 @@
               return {
                 attester: att[0],
                 subject: att[1],
-                trustLevel: att[2],
+                trustLevel: toNumber(att[2]),
                 comment: att[3],
-                timestamp: att[4],
+                timestamp: toNumber(att[4]),
                 isActive: att[5]
               };
             })
@@ -128,23 +142,20 @@
 
     creatingAttestation = true;
     try {
-      // Get signer with proper error handling
-      if (!contract || !contract.runner) {
-        throw new Error('Contract not properly initialized');
+      if (!contract) {
+        throw new Error('Contract not available on this network');
       }
-      
-      let signer;
-      try {
-        signer = await contract.runner.getSigner();
-      } catch (signerError) {
-        throw new Error('Failed to get signer. Please ensure your wallet is connected.');
+
+      if (!primarySigner) {
+        throw new Error('Wallet not connected');
       }
-      
-      // Create a simple signature (in production, use proper PGP signature)
+
+      const signerContract = contract.runner ? contract : contract.connect(primarySigner);
+
       const message = `Attestation: ${address} at ${newAttestation.trustLevel}`;
-      const signature = await signer.signMessage(message);
-      
-      const tx = await contract.createAttestation(
+      const signature = await primarySigner.signMessage(message);
+
+      const tx = await signerContract.createAttestation(
         address,
         newAttestation.trustLevel,
         newAttestation.comment,

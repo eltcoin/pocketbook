@@ -12,14 +12,30 @@
 
   let darkMode = false;
   let loading = true;
-  let socialGraph = {
+  const EMPTY_SOCIAL_GRAPH = {
     following: [],
     followers: [],
     friends: []
   };
+  const EMPTY_PENDING_REQUESTS = {
+    sent: [],
+    received: []
+  };
+  let socialGraph = { ...EMPTY_SOCIAL_GRAPH };
   let userAddress = null;
   let contract = null;
   let activeTab = 'followers'; // followers, following, friends
+  let primaryChainId = null;
+  let primaryNetworkName = null;
+  let pendingFriendRequests = { ...EMPTY_PENDING_REQUESTS };
+  let globalPendingRequests = { ...EMPTY_PENDING_REQUESTS };
+  let pendingLoading = false;
+  let lastLoadedAddress = null;
+  let lastLoadedChainId = null;
+  let loadSequence = 0;
+  let hasClaimOnPrimaryChain = false;
+  let canCheckClaimStatus = false;
+  let claimStatusLoading = true;
   
   // Relationship status with this user
   let isFollowingUser = false;
@@ -34,27 +50,100 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
-    contract = value.chains?.[value.primaryChainId]?.contract || null;
+    primaryChainId = value.primaryChainId;
+    const chainEntry = value.chains?.[value.primaryChainId];
+    contract = chainEntry?.contract || null;
+    primaryNetworkName = chainEntry?.networkConfig?.name || null;
+    globalPendingRequests = value.pendingFriendRequests || { ...EMPTY_PENDING_REQUESTS };
   });
 
   onMount(async () => {
-    await loadSocialGraph();
-    if (userAddress && userAddress !== address) {
-      await checkRelationshipStatus();
-    }
+    await initializeData();
   });
 
+  $: if (address && (address !== lastLoadedAddress || primaryChainId !== lastLoadedChainId)) {
+    initializeData();
+  }
+
+  async function initializeData() {
+    if (!address) {
+      socialGraph = { ...EMPTY_SOCIAL_GRAPH };
+      pendingFriendRequests = { ...EMPTY_PENDING_REQUESTS };
+      claimStatusLoading = false;
+      return;
+    }
+
+    const targetAddress = address;
+    const targetChainId = primaryChainId;
+    const currentContract = contract;
+    const sequence = ++loadSequence;
+
+    if (currentContract && targetChainId) {
+      canCheckClaimStatus = true;
+      claimStatusLoading = true;
+      let claimResult = false;
+
+      try {
+        const response = await multiChainStore.checkClaimOnChain(targetChainId, targetAddress);
+        claimResult = Boolean(response?.success && response?.isClaimed);
+      } catch (error) {
+        console.error('Error checking claim status:', error);
+      }
+
+      if (sequence !== loadSequence) {
+        return;
+      }
+
+      hasClaimOnPrimaryChain = claimResult;
+      claimStatusLoading = false;
+    } else {
+      canCheckClaimStatus = false;
+      hasClaimOnPrimaryChain = false;
+      claimStatusLoading = false;
+    }
+
+    if (!currentContract || !hasClaimOnPrimaryChain) {
+      socialGraph = { ...EMPTY_SOCIAL_GRAPH };
+      if (!isOwner) {
+        pendingFriendRequests = { ...EMPTY_PENDING_REQUESTS };
+      }
+      loading = false;
+      pendingLoading = false;
+      lastLoadedAddress = targetAddress;
+      lastLoadedChainId = targetChainId;
+      return;
+    }
+
+    await loadSocialGraph();
+    await loadPendingRequests();
+    if (userAddress && userAddress !== targetAddress) {
+      await checkRelationshipStatus();
+    }
+    lastLoadedAddress = targetAddress;
+    lastLoadedChainId = targetChainId;
+  }
+
+  $: if (isOwner) {
+    pendingFriendRequests = hasClaimOnPrimaryChain
+      ? (globalPendingRequests || { ...EMPTY_PENDING_REQUESTS })
+      : { ...EMPTY_PENDING_REQUESTS };
+  }
+
   async function loadSocialGraph() {
+    if (!contract || !hasClaimOnPrimaryChain) {
+      socialGraph = { ...EMPTY_SOCIAL_GRAPH };
+      loading = false;
+      return;
+    }
+
     loading = true;
     try {
-      if (contract) {
-        const result = await contract.getSocialGraph(address);
-        socialGraph = {
-          following: result[0] || [],
-          followers: result[1] || [],
-          friends: result[2] || []
-        };
-      }
+      const result = await contract.getSocialGraph(address);
+      socialGraph = {
+        following: result[0] || [],
+        followers: result[1] || [],
+        friends: result[2] || []
+      };
     } catch (error) {
       console.error('Error loading social graph:', error);
       toastStore.show('Failed to load social graph', 'error');
@@ -63,9 +152,38 @@
     }
   }
 
+  async function loadPendingRequests(force = false) {
+    if (!hasClaimOnPrimaryChain || !address || !primaryChainId) {
+      if (!isOwner) {
+        pendingFriendRequests = { ...EMPTY_PENDING_REQUESTS };
+      }
+      pendingLoading = false;
+      return;
+    }
+
+    if (isOwner && !force) {
+      pendingFriendRequests = globalPendingRequests || { ...EMPTY_PENDING_REQUESTS };
+      pendingLoading = false;
+      return;
+    }
+
+    pendingLoading = true;
+    try {
+      const pending = await multiChainStore.refreshPendingFriendRequests({
+        address,
+        chainId: primaryChainId
+      });
+      pendingFriendRequests = pending;
+    } catch (error) {
+      console.error('Error loading pending friend requests:', error);
+    } finally {
+      pendingLoading = false;
+    }
+  }
+
   async function checkRelationshipStatus() {
     try {
-      if (contract && userAddress) {
+      if (contract && userAddress && hasClaimOnPrimaryChain) {
         isFollowingUser = await contract.isFollowing(userAddress, address);
         userIsFollowing = await contract.isFollowing(address, userAddress);
         areFriendsWithUser = await contract.areFriends(userAddress, address);
@@ -77,7 +195,28 @@
     }
   }
 
+  function ensureTargetClaimReady() {
+    if (claimStatusLoading) {
+      toastStore.show('Checking claim status, please try again in a moment.', 'info');
+      return false;
+    }
+
+    if (!contract) {
+      toastStore.show('Connect your wallet to interact with the social graph.', 'error');
+      return false;
+    }
+
+    if (!hasClaimOnPrimaryChain) {
+      const suffix = primaryNetworkName ? `on ${primaryNetworkName}` : 'on this network';
+      toastStore.show(`This address has not been claimed ${suffix} yet.`, 'error');
+      return false;
+    }
+
+    return true;
+  }
+
   async function handleFollow() {
+    if (!ensureTargetClaimReady()) return;
     try {
       const tx = await contract.followUser(address);
       await tx.wait();
@@ -91,6 +230,7 @@
   }
 
   async function handleUnfollow() {
+    if (!ensureTargetClaimReady()) return;
     try {
       const tx = await contract.unfollowUser(address);
       await tx.wait();
@@ -104,37 +244,77 @@
   }
 
   async function handleSendFriendRequest() {
+    if (!ensureTargetClaimReady()) return;
     try {
       const tx = await contract.sendFriendRequest(address);
       await tx.wait();
       toastStore.show('Friend request sent', 'success');
       await checkRelationshipStatus();
+      await loadPendingRequests(true);
+      await multiChainStore.refreshPendingFriendRequests();
     } catch (error) {
       console.error('Error sending friend request:', error);
       toastStore.show('Failed to send friend request', 'error');
     }
   }
 
-  async function handleAcceptFriendRequest() {
+  async function handleAcceptFriendRequest(targetAddress = address) {
+    if (!ensureTargetClaimReady()) return;
     try {
-      const tx = await contract.acceptFriendRequest(address);
+      const tx = await contract.acceptFriendRequest(targetAddress);
       await tx.wait();
       toastStore.show('Friend request accepted', 'success');
       await loadSocialGraph();
       await checkRelationshipStatus();
+      await loadPendingRequests(true);
+      await multiChainStore.refreshPendingFriendRequests();
     } catch (error) {
       console.error('Error accepting friend request:', error);
       toastStore.show('Failed to accept friend request', 'error');
     }
   }
 
+  async function handleDeclineFriendRequest(targetAddress = address) {
+    if (!ensureTargetClaimReady()) return;
+    try {
+      const tx = await contract.declineFriendRequest(targetAddress);
+      await tx.wait();
+      toastStore.show('Friend request declined', 'success');
+      await loadSocialGraph();
+      await checkRelationshipStatus();
+      await loadPendingRequests(true);
+      await multiChainStore.refreshPendingFriendRequests();
+    } catch (error) {
+      console.error('Error declining friend request:', error);
+      toastStore.show('Failed to decline friend request', 'error');
+    }
+  }
+
+  async function handleCancelFriendRequest(targetAddress = address) {
+    if (!ensureTargetClaimReady()) return;
+    try {
+      const tx = await contract.cancelFriendRequest(targetAddress);
+      await tx.wait();
+      toastStore.show('Friend request cancelled', 'success');
+      await checkRelationshipStatus();
+      await loadPendingRequests(true);
+      await multiChainStore.refreshPendingFriendRequests();
+    } catch (error) {
+      console.error('Error cancelling friend request:', error);
+      toastStore.show('Failed to cancel friend request', 'error');
+    }
+  }
+
   async function handleRemoveFriend() {
+    if (!ensureTargetClaimReady()) return;
     try {
       const tx = await contract.removeFriend(address);
       await tx.wait();
       toastStore.show('Friend removed', 'success');
       await loadSocialGraph();
       await checkRelationshipStatus();
+      await loadPendingRequests(true);
+      await multiChainStore.refreshPendingFriendRequests();
     } catch (error) {
       console.error('Error removing friend:', error);
       toastStore.show('Failed to remove friend', 'error');
@@ -157,19 +337,24 @@
       <span>Social Network</span>
     </h2>
     
-    {#if !isOwner && userAddress && userAddress !== address}
+    {#if !isOwner && userAddress && userAddress !== address && contract && hasClaimOnPrimaryChain}
       <div class="action-buttons">
         {#if areFriendsWithUser}
           <button class="btn-social btn-friends" on:click={handleRemoveFriend}>
             ✓ Friends
           </button>
         {:else if hasReceivedRequest}
-          <button class="btn-social btn-accept" on:click={handleAcceptFriendRequest}>
-            Accept Friend Request
-          </button>
+          <div class="request-action-group">
+            <button class="btn-social btn-accept" on:click={() => handleAcceptFriendRequest()}>
+              Accept
+            </button>
+            <button class="btn-social btn-decline" on:click={() => handleDeclineFriendRequest(address)}>
+              Decline
+            </button>
+          </div>
         {:else if hasPendingRequest}
-          <button class="btn-social btn-pending" disabled>
-            Friend Request Pending
+          <button class="btn-social btn-cancel" on:click={() => handleCancelFriendRequest(address)}>
+            Cancel Friend Request
           </button>
         {:else}
           <button class="btn-social btn-add-friend" on:click={handleSendFriendRequest}>
@@ -190,7 +375,68 @@
     {/if}
   </div>
 
-  {#if loading}
+  {#if isOwner && hasClaimOnPrimaryChain && canCheckClaimStatus}
+    <div class="pending-requests-card">
+      <div class="card-header">
+        <h3>Pending Friend Requests</h3>
+        {#if pendingLoading}
+          <span class="pending-status">Checking...</span>
+        {/if}
+      </div>
+
+      {#if pendingLoading}
+        <p class="pending-message">Fetching your pending requests…</p>
+      {:else if pendingFriendRequests.received.length === 0 && pendingFriendRequests.sent.length === 0}
+        <p class="pending-message">No pending friend requests right now.</p>
+      {:else}
+        {#if pendingFriendRequests.received.length > 0}
+          <div class="pending-section">
+            <h4>Received</h4>
+            {#each pendingFriendRequests.received as requester}
+              <div class="pending-item">
+                <span class="pending-address">{shortenAddress(requester)}</span>
+                <div class="pending-actions">
+                  <button class="btn-social btn-accept" on:click={() => handleAcceptFriendRequest(requester)}>Accept</button>
+                  <button class="btn-social btn-decline" on:click={() => handleDeclineFriendRequest(requester)}>Decline</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+
+        {#if pendingFriendRequests.sent.length > 0}
+          <div class="pending-section">
+            <h4>Sent</h4>
+            {#each pendingFriendRequests.sent as recipient}
+              <div class="pending-item">
+                <span class="pending-address">{shortenAddress(recipient)}</span>
+                <div class="pending-actions">
+                  <button class="btn-social btn-cancel" on:click={() => handleCancelFriendRequest(recipient)}>Cancel</button>
+                </div>
+              </div>
+            {/each}
+          </div>
+        {/if}
+      {/if}
+    </div>
+  {/if}
+
+  {#if !canCheckClaimStatus}
+    <div class="claim-required">
+      <Icon name="tools" size="1.5rem" />
+      <p>Connect your wallet and switch to a supported network to view social activity.</p>
+    </div>
+  {:else if claimStatusLoading}
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Checking claim status...</p>
+    </div>
+  {:else if !hasClaimOnPrimaryChain}
+    <div class="claim-required">
+      <Icon name="shield-alt" size="1.5rem" />
+      <p>This address hasn't claimed its Pocketbook identity {primaryNetworkName ? `on ${primaryNetworkName}` : 'on this network'} yet, so social features are unavailable.</p>
+    </div>
+  {:else if loading}
     <div class="loading">
       <div class="spinner"></div>
       <p>Loading social graph...</p>
@@ -362,6 +608,24 @@
     background: #38a169;
   }
 
+  .btn-decline {
+    background: #f87171;
+    color: white;
+  }
+
+  .btn-decline:hover {
+    background: #ef4444;
+  }
+
+  .btn-cancel {
+    background: #e2e8f0;
+    color: #1e293b;
+  }
+
+  .btn-cancel:hover {
+    background: #cbd5e1;
+  }
+
   .btn-friends {
     background: #4299e1;
     color: white;
@@ -369,6 +633,113 @@
 
   .btn-friends:hover {
     background: #3182ce;
+  }
+
+  .request-action-group {
+    display: flex;
+    gap: 0.5rem;
+  }
+
+  .pending-requests-card {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+  }
+
+  .social-graph.dark .pending-requests-card {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .pending-requests-card h3 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+
+  .pending-status {
+    font-size: 0.85rem;
+    color: #64748b;
+  }
+
+  .social-graph.dark .pending-status {
+    color: #94a3b8;
+  }
+
+  .pending-message {
+    margin: 0;
+    color: #64748b;
+    font-style: italic;
+  }
+
+  .social-graph.dark .pending-message {
+    color: #94a3b8;
+  }
+
+  .claim-required {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    border: 1px dashed #cbd5f5;
+    border-radius: 12px;
+    background: rgba(59, 130, 246, 0.08);
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .social-graph.dark .claim-required {
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #f1f5f9;
+  }
+
+  .claim-required p {
+    margin: 0;
+    font-size: 0.95rem;
+  }
+
+  .pending-section {
+    margin-top: 1rem;
+  }
+
+  .pending-section h4 {
+    margin: 0 0 0.75rem;
+    font-size: 1rem;
+  }
+
+  .pending-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+  }
+
+  .social-graph.dark .pending-item {
+    background: #1e293b;
+    border-color: #334155;
+  }
+
+  .pending-address {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+
+  .pending-actions {
+    display: flex;
+    gap: 0.5rem;
   }
 
   .loading {

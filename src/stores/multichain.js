@@ -2,6 +2,7 @@ import { writable, derived, get } from 'svelte/store';
 import { ethers } from 'ethers';
 import { getSupportedNetworks, getNetworkByChainId } from '../config/networks';
 import { parseClaimData } from '../utils/claimParser';
+import { calculateReputation, getReputationSummary } from '../utils/reputation';
 
 // Constants
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -22,8 +23,15 @@ function createMultiChainStore() {
     chains: {}, // { chainId: { provider, contract, networkConfig, isAvailable } }
     
     // Track which chains have been initialized
-    initializedChains: []
+    initializedChains: [],
+    pendingFriendRequests: {
+      sent: [],
+      received: []
+    },
+    trustScore: null,
+    reputationSummary: null
   });
+  const baseStore = { subscribe };
 
   // Contract ABI
   const contractABI = [
@@ -33,19 +41,24 @@ function createMultiChainStore() {
     "function isClaimed(address) public view returns (bool)",
     "function addViewer(address _viewer) public",
     "function removeViewer(address _viewer) public",
+    "function getAllowedViewers(address _address) public view returns (address[] memory)",
     "function revokeClaim() public",
     "function getIPFSCID(address _address) public view returns (string memory)",
     "function getPGPSignature(address _address) public view returns (string memory)",
+    "function getPublicKey(address _address) public view returns (bytes memory)",
     "function getDIDRoutingInfo(address _address) public view returns (string memory did, string memory ipfsCID)",
     "function followUser(address _userToFollow) public",
     "function unfollowUser(address _userToUnfollow) public",
     "function sendFriendRequest(address _to) public",
     "function acceptFriendRequest(address _from) public",
+    "function cancelFriendRequest(address _to) public",
+    "function declineFriendRequest(address _from) public",
     "function removeFriend(address _friend) public",
     "function getSocialGraph(address _address) public view returns (address[] memory following, address[] memory followers, address[] memory friends)",
     "function isFollowing(address _user1, address _user2) public view returns (bool)",
     "function areFriends(address _user1, address _user2) public view returns (bool)",
     "function hasPendingFriendRequest(address _from, address _to) public view returns (bool)",
+    "function getPendingFriendRequests(address _address) public view returns (address[] memory sent, address[] memory received)",
     // Reputation attestation functions
     "function createAttestation(address _subject, uint8 _trustLevel, string memory _comment, bytes memory _signature) public",
     "function revokeAttestation(address _subject) public",
@@ -61,6 +74,8 @@ function createMultiChainStore() {
     "event UserUnfollowed(address indexed follower, address indexed followee, uint256 timestamp)",
     "event FriendRequestSent(address indexed from, address indexed to, uint256 timestamp)",
     "event FriendRequestAccepted(address indexed from, address indexed to, uint256 timestamp)",
+    "event FriendRequestDeclined(address indexed from, address indexed to, uint256 timestamp)",
+    "event FriendRequestCancelled(address indexed from, address indexed to, uint256 timestamp)",
     "event FriendRemoved(address indexed user1, address indexed user2, uint256 timestamp)",
     "event AttestationCreated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp)",
     "event AttestationRevoked(address indexed attester, address indexed subject, uint256 timestamp)",
@@ -135,6 +150,113 @@ function createMultiChainStore() {
     return chains;
   }
 
+  let chainsInitializationPromise = null;
+
+  async function ensureChainsInitialized(force = false) {
+    const currentStore = get(baseStore);
+    if (!force && currentStore.initializedChains.length > 0 && !chainsInitializationPromise) {
+      return currentStore.chains;
+    }
+
+    if (chainsInitializationPromise) {
+      return chainsInitializationPromise;
+    }
+
+    chainsInitializationPromise = (async () => {
+      const chains = await initializeChains();
+      update(store => ({
+        ...store,
+        chains,
+        initializedChains: Object.keys(chains).map(Number)
+      }));
+      chainsInitializationPromise = null;
+      return chains;
+    })();
+
+    return chainsInitializationPromise;
+  }
+
+  function normalizeAddressArray(value) {
+    if (!value) return [];
+    if (Array.isArray(value)) return value.map(addr => addr);
+    if (typeof value === 'object' && value !== null) {
+      return Object.keys(value)
+        .filter(key => !Number.isNaN(Number(key)))
+        .sort((a, b) => Number(a) - Number(b))
+        .map(key => value[key]);
+    }
+    return [];
+  }
+
+  async function fetchPendingFriendRequests(address, chainId, chainsSnapshot) {
+    if (!address || !chainId) {
+      return { sent: [], received: [] };
+    }
+
+    const chains = chainsSnapshot || get(baseStore).chains;
+    const chainData = chains?.[chainId];
+    if (!chainData || !chainData.contract || typeof chainData.contract.getPendingFriendRequests !== 'function') {
+      return { sent: [], received: [] };
+    }
+
+    try {
+      const pending = await chainData.contract.getPendingFriendRequests(address);
+      const sent = normalizeAddressArray(pending?.[0] ?? pending?.sent);
+      const received = normalizeAddressArray(pending?.[1] ?? pending?.received);
+
+      return { sent, received };
+    } catch (error) {
+      console.debug('Pending friend request fetch failed:', error);
+      return { sent: [], received: [] };
+    }
+  }
+
+  async function fetchReputationSummary(address, chainId, chainsSnapshot) {
+    if (!address || !chainId) {
+      return null;
+    }
+
+    const chains = chainsSnapshot || get(baseStore).chains;
+    const chainData = chains?.[chainId];
+    if (
+      !chainData ||
+      !chainData.contract ||
+      typeof chainData.contract.getAttestationsReceived !== 'function' ||
+      typeof chainData.contract.getAttestation !== 'function'
+    ) {
+      return null;
+    }
+
+    try {
+      const receivedList = await chainData.contract.getAttestationsReceived(address);
+      const directAttestations = await Promise.all(
+        receivedList.map(async (attester) => {
+          const att = await chainData.contract.getAttestation(attester, address);
+          return {
+            attester: att[0],
+            subject: att[1],
+            trustLevel: Number(att[2]),
+            comment: att[3],
+            timestamp: Number(att[4]),
+            isActive: att[5]
+          };
+        })
+      );
+
+      const reputation = calculateReputation(
+        address,
+        directAttestations.filter(att => att.isActive),
+        {},
+        null
+      );
+
+      return getReputationSummary(reputation);
+    } catch (error) {
+      console.error('Failed to fetch reputation summary:', error);
+      return null;
+    }
+  }
+
   const storeMethods = {
     subscribe,
     
@@ -184,6 +306,18 @@ function createMultiChainStore() {
           initializedChains: Object.keys(chains).map(Number)
         }));
 
+        const [pendingRequests, reputationSummary] = await Promise.all([
+          fetchPendingFriendRequests(address, chainId, chains),
+          fetchReputationSummary(address, chainId, chains)
+        ]);
+
+        update(store => ({
+          ...store,
+          pendingFriendRequests: pendingRequests,
+          trustScore: reputationSummary?.score ?? null,
+          reputationSummary: reputationSummary || null
+        }));
+
         // Setup event listeners
         if (accountsChangedHandler) {
           window.ethereum.removeListener('accountsChanged', accountsChangedHandler);
@@ -214,7 +348,9 @@ function createMultiChainStore() {
           success: true, 
           address, 
           chainId,
-          availableChains 
+          availableChains,
+          pendingRequests,
+          reputationSummary
         };
       } catch (error) {
         console.error('Connection error:', error);
@@ -239,7 +375,18 @@ function createMultiChainStore() {
         primarySigner: null,
         connected: false,
         chains: {},
-        initializedChains: []
+        initializedChains: [],
+        pendingFriendRequests: {
+          sent: [],
+          received: []
+        },
+        trustScore: null,
+        reputationSummary: null
+      });
+
+      // Reinitialize read-only providers so the app can continue to browse
+      ensureChainsInitialized(true).catch((error) => {
+        console.error('Error reinitializing chains after disconnect:', error);
       });
     },
 
@@ -298,7 +445,7 @@ function createMultiChainStore() {
      * Get contract instance for a specific chain
      */
     getChainContract: (chainId) => {
-      const currentStore = get(storeMethods);
+      const currentStore = get(baseStore);
       return currentStore.chains[chainId]?.contract || null;
     },
 
@@ -306,7 +453,7 @@ function createMultiChainStore() {
      * Get provider for a specific chain
      */
     getChainProvider: (chainId) => {
-      const currentStore = get(storeMethods);
+      const currentStore = get(baseStore);
       return currentStore.chains[chainId]?.provider || null;
     },
 
@@ -314,7 +461,8 @@ function createMultiChainStore() {
      * Check if a claim exists on a specific chain
      */
     checkClaimOnChain: async (chainId, address) => {
-      const currentStore = get(storeMethods);
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
 
       const chainData = currentStore.chains[chainId];
       if (!chainData || !chainData.contract || !chainData.isAvailable) {
@@ -334,7 +482,8 @@ function createMultiChainStore() {
      * Get claim data from a specific chain
      */
     getClaimFromChain: async (chainId, address) => {
-      const currentStore = get(storeMethods);
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
 
       const chainData = currentStore.chains[chainId];
       if (!chainData || !chainData.contract || !chainData.isAvailable) {
@@ -342,6 +491,11 @@ function createMultiChainStore() {
       }
 
       try {
+        const isClaimed = await chainData.contract.isClaimed(address);
+        if (!isClaimed) {
+          return { success: false, error: 'Address not claimed on this chain' };
+        }
+
         const claim = await chainData.contract.getClaim(address);
         return { 
           success: true, 
@@ -357,12 +511,18 @@ function createMultiChainStore() {
      * Get claims across all chains for an address
      */
     getClaimsAcrossChains: async (address) => {
-      const currentStore = get(storeMethods);
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
 
       const claimPromises = Object.entries(currentStore.chains)
         .filter(([_, chainData]) => chainData.isAvailable && chainData.contract)
         .map(async ([chainId, chainData]) => {
           try {
+            const isClaimed = await chainData.contract.isClaimed(address);
+            if (!isClaimed) {
+              return null;
+            }
+
             const claim = await chainData.contract.getClaim(address);
             const parsedClaim = parseClaimData(claim);
             
@@ -375,6 +535,10 @@ function createMultiChainStore() {
               };
             }
           } catch (error) {
+            const reason = error?.reason || error?.shortMessage || error?.message;
+            if (reason && reason.toLowerCase().includes('address not claimed')) {
+              return null;
+            }
             console.error(`Error fetching claim on ${chainData.networkConfig.name}:`, error);
           }
           return null;
@@ -385,10 +549,259 @@ function createMultiChainStore() {
     },
 
     /**
+     * Refresh pending friend requests for the current or specified address
+     */
+    refreshPendingFriendRequests: async ({ address, chainId } = {}) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      const targetAddress = address || currentStore.primaryAddress;
+      const targetChainId = chainId || currentStore.primaryChainId;
+
+      if (!targetAddress || !targetChainId) {
+        return { sent: [], received: [] };
+      }
+
+      const pending = await fetchPendingFriendRequests(targetAddress, targetChainId, currentStore.chains);
+
+      if (!address && !chainId) {
+        update(store => ({
+          ...store,
+          pendingFriendRequests: pending
+        }));
+      }
+
+      return pending;
+    },
+
+    /**
+     * Refresh trust score for the primary address
+     */
+    refreshPrimaryTrustScore: async () => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.primaryAddress || !currentStore.primaryChainId) {
+        return { success: false };
+      }
+
+      const summary = await fetchReputationSummary(
+        currentStore.primaryAddress,
+        currentStore.primaryChainId,
+        currentStore.chains
+      );
+
+      update(store => ({
+        ...store,
+        trustScore: summary?.score ?? null,
+        reputationSummary: summary || null
+      }));
+
+      return { success: Boolean(summary), summary };
+    },
+
+    /**
+     * Claim the connected address on the current primary chain
+     */
+    claimAddressOnPrimaryChain: async ({
+      signature,
+      name,
+      avatar = '',
+      bio = '',
+      website = '',
+      twitter = '',
+      github = '',
+      publicKey = null,
+      pgpSignature = '',
+      isPrivate = false,
+      ipfsCID = ''
+    }) => {
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+
+      const signer = currentStore.primarySigner;
+      if (!signer) {
+        throw new Error('No signer available');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      if (!chainId) {
+        throw new Error('No active chain');
+      }
+
+      if (!signature) {
+        throw new Error('Missing signature');
+      }
+
+      const chainData = currentStore.chains[chainId];
+      if (!chainData || !chainData.contract) {
+        throw new Error('Contract not available on current chain');
+      }
+
+      const claimantAddress = currentStore.primaryAddress;
+      if (!claimantAddress) {
+        throw new Error('No primary address');
+      }
+
+      const contract = chainData.contract.connect(signer);
+      const publicKeyBytes = publicKey && publicKey.length ? publicKey : new Uint8Array();
+
+      const tx = await contract.claimAddress(
+        claimantAddress,
+        signature,
+        name,
+        avatar,
+        bio,
+        website,
+        twitter,
+        github,
+        publicKeyBytes,
+        pgpSignature,
+        Boolean(isPrivate),
+        ipfsCID
+      );
+
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash,
+        chainId
+      };
+    },
+
+    /**
+     * Update metadata for the primary address
+     */
+    updateMetadataOnPrimaryChain: async ({
+      name,
+      avatar = '',
+      bio = '',
+      website = '',
+      twitter = '',
+      github = '',
+      publicKey = null,
+      pgpSignature = '',
+      isPrivate = false,
+      ipfsCID = ''
+    }) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      if (!chainId) {
+        throw new Error('No active chain');
+      }
+
+      const chainData = currentStore.chains[chainId];
+      if (!chainData?.contract) {
+        throw new Error('Contract not available on current chain');
+      }
+
+      const publicKeyBytes = publicKey
+        ? (typeof publicKey === 'string' ? ethers.getBytes(publicKey) : publicKey)
+        : new Uint8Array();
+
+      const tx = await chainData.contract.updateMetadata(
+        name,
+        avatar,
+        bio,
+        website,
+        twitter,
+        github,
+        publicKeyBytes,
+        pgpSignature,
+        Boolean(isPrivate),
+        ipfsCID || ''
+      );
+
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash
+      };
+    },
+
+    /**
+     * Add a viewer to the private metadata allowlist on the primary chain
+     */
+    addViewerOnPrimaryChain: async (viewerAddress) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      const chainData = chainId ? currentStore.chains[chainId] : null;
+      if (!chainData?.contract) {
+        throw new Error('Contract not available on current chain');
+      }
+
+      const tx = await chainData.contract.addViewer(viewerAddress);
+      const receipt = await tx.wait();
+      return { success: true, transactionHash: receipt.hash };
+    },
+
+    /**
+     * Remove a viewer from the private metadata allowlist on the primary chain
+     */
+    removeViewerOnPrimaryChain: async (viewerAddress) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      const chainData = chainId ? currentStore.chains[chainId] : null;
+      if (!chainData?.contract) {
+        throw new Error('Contract not available on current chain');
+      }
+
+      const tx = await chainData.contract.removeViewer(viewerAddress);
+      const receipt = await tx.wait();
+      return { success: true, transactionHash: receipt.hash };
+    },
+
+    /**
+     * Fetch allowed viewers for an address (defaults to primary)
+     */
+    getAllowedViewers: async (chainId, address) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      const targetChainId = chainId || currentStore.primaryChainId;
+      const targetAddress = address || currentStore.primaryAddress;
+
+      if (!targetChainId || !targetAddress) {
+        return [];
+      }
+
+      const chainData = currentStore.chains[targetChainId];
+      if (!chainData?.contract) {
+        return [];
+      }
+
+      const viewers = await chainData.contract.getAllowedViewers(targetAddress);
+      return normalizeAddressArray(viewers);
+    },
+
+    /**
      * Sign message with primary signer
      */
     signMessage: async (message) => {
-      const currentStore = get(storeMethods);
+      const currentStore = get(baseStore);
 
       if (!currentStore.primarySigner) {
         throw new Error('No signer available');
@@ -398,6 +811,11 @@ function createMultiChainStore() {
     }
   };
   
+  // Initialize read-only providers on load for unauthenticated users
+  ensureChainsInitialized().catch((error) => {
+    console.error('Failed to initialize chains on load:', error);
+  });
+
   return storeMethods;
 }
 

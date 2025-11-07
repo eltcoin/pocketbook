@@ -86,8 +86,21 @@ export function opinionToEvidence(opinion, c = EVIDENCE_CONSTANT_C) {
  * @returns {Opinion} Subjective logic opinion
  */
 export function trustLevelToOpinion(trustLevel, evidenceAmount = 10) {
+  let levelNumber;
+
+  if (typeof trustLevel === 'bigint') {
+    levelNumber = Number(trustLevel);
+  } else {
+    levelNumber = Number(trustLevel ?? 0);
+  }
+
+  if (!Number.isFinite(levelNumber)) {
+    levelNumber = 0;
+  }
+
   // Normalize trust level to 0-1 range
-  const normalizedTrust = Math.max(0, Math.min(100, trustLevel)) / 100;
+  const clampedLevel = Math.max(0, Math.min(100, levelNumber));
+  const normalizedTrust = clampedLevel / 100;
   
   // Map to positive and negative evidence
   // Higher trust = more positive evidence
