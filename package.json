@@ -19,6 +19,8 @@
     "test:e2e:report": "playwright show-report",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:simple": "playwright test --config=playwright.config.simple.js",
+    "test:e2e:web3": "bash scripts/run-all-tests-web3.sh",
+    "test:e2e:all": "bash scripts/run-all-tests-web3.sh",
     "test:setup": "bash scripts/setup-test-env.sh"
   },
   "keywords": [],
