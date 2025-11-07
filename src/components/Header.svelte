@@ -2,6 +2,7 @@
   import { createEventDispatcher } from 'svelte';
   import { multiChainStore, primaryNetwork } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import { navigate } from '../utils/router';
   import NetworkSelector from './NetworkSelector.svelte';
   import Icon from './Icon.svelte';
 
@@ -35,7 +36,14 @@
   }
 
   function navigateTo(view) {
-    dispatch('viewChange', { view });
+    // Use router for navigation
+    if (view === 'explorer') {
+      navigate('/');
+    } else if (view === 'claim') {
+      navigate('/claim');
+    } else if (view === 'admin') {
+      navigate('/admin');
+    }
   }
 
   function toggleTheme() {

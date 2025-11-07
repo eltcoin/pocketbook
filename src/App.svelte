@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { multiChainStore } from './stores/multichain';
   import { themeStore } from './stores/theme';
+  import { currentRoute, navigate } from './utils/router';
   import Header from './components/Header.svelte';
   import AddressClaim from './components/AddressClaim.svelte';
   import Explorer from './components/Explorer.svelte';
@@ -10,7 +11,7 @@
   import Toast from './components/Toast.svelte';
   import AnimatedBackground from './components/AnimatedBackground.svelte';
 
-  let currentView = 'explorer'; // 'explorer', 'claim', 'address', 'admin'
+  let currentView = 'explorer';
   let selectedAddress = null;
   let selectedENSName = null;
   let darkMode = false;
@@ -19,11 +20,31 @@
     darkMode = value.darkMode;
   });
 
+  // Subscribe to route changes
+  currentRoute.subscribe(route => {
+    currentView = route.view;
+    if (route.params.address) {
+      selectedAddress = route.params.address;
+      selectedENSName = null; // Will be resolved by AddressView
+    } else {
+      selectedAddress = null;
+      selectedENSName = null;
+    }
+  });
+
   function handleViewChange(event) {
-    currentView = event.detail.view;
-    if (event.detail.address) {
-      selectedAddress = event.detail.address;
-      selectedENSName = event.detail.ensName || null;
+    const { view, address, ensName } = event.detail;
+    
+    // Update URL based on view
+    if (view === 'explorer') {
+      navigate('/');
+    } else if (view === 'address' && address) {
+      navigate(`/explore/${address}`);
+      selectedENSName = ensName || null;
+    } else if (view === 'claim') {
+      navigate('/claim');
+    } else if (view === 'admin') {
+      navigate('/admin');
     }
   }
 </script>

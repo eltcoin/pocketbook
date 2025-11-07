@@ -28,6 +28,11 @@
     followers: [],
     friends: []
   };
+  let activeTab = 'overview'; // overview, transactions, tokens, contracts
+  let transactions = [];
+  let loadingTransactions = false;
+  let balance = '0';
+  let loadingBalance = false;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -50,6 +55,9 @@
       }
     }
 
+    // Load balance
+    await loadBalance();
+
     // Load social graph data if contract is available
     if (contract) {
       try {
@@ -62,32 +70,116 @@
       } catch (error) {
         console.error('Error loading social graph:', error);
       }
-    }
 
-    // Simulate fetching claim data
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Mock claimed data
-    if (address === '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1') {
-      isClaimed = true;
-      claimData = {
-        name: 'Alice.eth',
-        avatar: '👤',
-        bio: 'Blockchain enthusiast and developer. Building the decentralized future.',
-        website: 'https://alice.eth.link',
-        twitter: '@alice_eth',
-        github: 'alice-eth',
-        pgpSignature: '-----BEGIN PGP SIGNATURE-----\n\nExample signature...\n-----END PGP SIGNATURE-----',
-        claimTime: Date.now() - 86400000,
-        isPrivate: false
-      };
-      isOwner = userAddress === address;
+      // Check if address is claimed
+      try {
+        const claim = await contract.getClaim(address);
+        if (claim.isActive) {
+          isClaimed = true;
+          claimData = {
+            name: claim.metadata.name || 'Anonymous',
+            avatar: claim.metadata.avatar || '👤',
+            bio: claim.metadata.bio || '',
+            website: claim.metadata.website || '',
+            twitter: claim.metadata.twitter || '',
+            github: claim.metadata.github || '',
+            pgpSignature: claim.metadata.pgpSignature || '',
+            claimTime: Number(claim.claimTime) * 1000,
+            isPrivate: claim.metadata.isPrivate
+          };
+          isOwner = userAddress && userAddress.toLowerCase() === address.toLowerCase();
+        }
+      } catch (error) {
+        console.error('Error loading claim:', error);
+        isClaimed = false;
+      }
     } else {
-      isClaimed = false;
+      // Mock data when no contract (for demo purposes)
+      if (address === '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1') {
+        isClaimed = true;
+        claimData = {
+          name: 'Alice.eth',
+          avatar: '👤',
+          bio: 'Blockchain enthusiast and developer. Building the decentralized future.',
+          website: 'https://alice.eth.link',
+          twitter: '@alice_eth',
+          github: 'alice-eth',
+          pgpSignature: '-----BEGIN PGP SIGNATURE-----\n\nExample signature...\n-----END PGP SIGNATURE-----',
+          claimTime: Date.now() - 86400000,
+          isPrivate: false
+        };
+        isOwner = userAddress === address;
+      }
     }
     
     loading = false;
   });
+
+  async function loadBalance() {
+    if (!provider || !address) return;
+    
+    loadingBalance = true;
+    try {
+      const balanceWei = await provider.getBalance(address);
+      balance = (Number(balanceWei) / 1e18).toFixed(4);
+    } catch (error) {
+      console.error('Error loading balance:', error);
+      balance = '0';
+    } finally {
+      loadingBalance = false;
+    }
+  }
+
+  async function loadTransactions() {
+    if (!provider || !address || loadingTransactions) return;
+    
+    loadingTransactions = true;
+    try {
+      // Get recent transactions (last 10 blocks as example)
+      // NOTE: This is a simplified implementation for demo purposes
+      // In production, use an indexer service (The Graph, Etherscan API, Alchemy, etc.)
+      // for better performance and complete transaction history
+      const currentBlock = await provider.getBlockNumber();
+      const txs = [];
+      
+      // This is a simplified version - in production you'd use an indexer
+      for (let i = 0; i < Math.min(5, currentBlock); i++) {
+        const block = await provider.getBlock(currentBlock - i, true);
+        if (block && block.transactions) {
+          for (const tx of block.transactions) {
+            if (typeof tx === 'object' && (tx.from?.toLowerCase() === address.toLowerCase() || 
+                tx.to?.toLowerCase() === address.toLowerCase())) {
+              txs.push({
+                hash: tx.hash,
+                from: tx.from,
+                to: tx.to || 'Contract Creation',
+                value: (Number(tx.value) / 1e18).toFixed(4),
+                blockNumber: block.number,
+                timestamp: block.timestamp
+              });
+              
+              if (txs.length >= 10) break;
+            }
+          }
+        }
+        if (txs.length >= 10) break;
+      }
+      
+      transactions = txs;
+    } catch (error) {
+      console.error('Error loading transactions:', error);
+      transactions = [];
+    } finally {
+      loadingTransactions = false;
+    }
+  }
+
+  function setActiveTab(tab) {
+    activeTab = tab;
+    if (tab === 'transactions' && transactions.length === 0) {
+      loadTransactions();
+    }
+  }
 
   function goBack() {
     dispatch('viewChange', { view: 'explorer' });
@@ -232,6 +324,134 @@
         {/if}
       </div>
 
+      <!-- Explorer Tabs -->
+      <div class="explorer-tabs">
+        <div class="tabs-header">
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'overview'}
+            on:click={() => setActiveTab('overview')}
+          >
+            <Icon name="info-circle" size="1.125rem" />
+            Overview
+          </button>
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'transactions'}
+            on:click={() => setActiveTab('transactions')}
+          >
+            <Icon name="exchange-alt" size="1.125rem" />
+            Transactions
+          </button>
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'tokens'}
+            on:click={() => setActiveTab('tokens')}
+          >
+            <Icon name="coins" size="1.125rem" />
+            Tokens
+          </button>
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'contracts'}
+            on:click={() => setActiveTab('contracts')}
+          >
+            <Icon name="file-contract" size="1.125rem" />
+            Contracts
+          </button>
+        </div>
+
+        <div class="tabs-content">
+          {#if activeTab === 'overview'}
+            <div class="tab-panel">
+              <h3>Account Overview</h3>
+              <div class="overview-grid">
+                <div class="overview-item">
+                  <div class="overview-label">Balance</div>
+                  <div class="overview-value">
+                    {#if loadingBalance}
+                      <span class="loading-dots">...</span>
+                    {:else}
+                      {balance} ETH
+                    {/if}
+                  </div>
+                </div>
+                <div class="overview-item">
+                  <div class="overview-label">Address</div>
+                  <div class="overview-value mono">{shortenAddress(address)}</div>
+                </div>
+                {#if resolvedENSName}
+                  <div class="overview-item">
+                    <div class="overview-label">ENS Name</div>
+                    <div class="overview-value">{resolvedENSName}</div>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {:else if activeTab === 'transactions'}
+            <div class="tab-panel">
+              <h3>Recent Transactions</h3>
+              {#if loadingTransactions}
+                <div class="loading-state">
+                  <div class="spinner-small"></div>
+                  <p>Loading transactions...</p>
+                </div>
+              {:else if transactions.length > 0}
+                <div class="transactions-list">
+                  {#each transactions as tx}
+                    <div class="transaction-item">
+                      <div class="tx-hash">
+                        <Icon name="exchange-alt" size="1rem" />
+                        <code>{tx.hash.substring(0, 20)}...</code>
+                      </div>
+                      <div class="tx-details">
+                        <div class="tx-row">
+                          <span class="tx-label">From:</span>
+                          <code class="tx-address">{tx.from.substring(0, 15)}...</code>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">To:</span>
+                          <code class="tx-address">{tx.to.substring(0, 15)}...</code>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">Value:</span>
+                          <span class="tx-value">{tx.value} ETH</span>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">Block:</span>
+                          <span class="tx-block">#{tx.blockNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="empty-state">
+                  <Icon name="inbox" size="2.5rem" />
+                  <p>No recent transactions found</p>
+                </div>
+              {/if}
+            </div>
+          {:else if activeTab === 'tokens'}
+            <div class="tab-panel">
+              <h3>Token Holdings</h3>
+              <div class="empty-state">
+                <Icon name="coins" size="2.5rem" />
+                <p>Token tracking coming soon. Connect to view ERC-20 and NFT holdings.</p>
+              </div>
+            </div>
+          {:else if activeTab === 'contracts'}
+            <div class="tab-panel">
+              <h3>Contract Interactions</h3>
+              <div class="empty-state">
+                <Icon name="file-contract" size="2.5rem" />
+                <p>Contract interaction history coming soon.</p>
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+
       <SocialGraph {address} {isOwner} on:viewAddress={handleViewChange} />
 
       <SocialGraphExplorer {address} socialGraph={socialGraphData} on:viewAddress={handleViewChange} />
@@ -281,6 +501,118 @@
             Only the owner of this address can claim it.
           </div>
         {/if}
+      </div>
+
+      <!-- Explorer Tabs for Unclaimed Address -->
+      <div class="explorer-tabs">
+        <div class="tabs-header">
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'overview'}
+            on:click={() => setActiveTab('overview')}
+          >
+            <Icon name="info-circle" size="1.125rem" />
+            Overview
+          </button>
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'transactions'}
+            on:click={() => setActiveTab('transactions')}
+          >
+            <Icon name="exchange-alt" size="1.125rem" />
+            Transactions
+          </button>
+          <button 
+            class="tab-btn" 
+            class:active={activeTab === 'tokens'}
+            on:click={() => setActiveTab('tokens')}
+          >
+            <Icon name="coins" size="1.125rem" />
+            Tokens
+          </button>
+        </div>
+
+        <div class="tabs-content">
+          {#if activeTab === 'overview'}
+            <div class="tab-panel">
+              <h3>Account Overview</h3>
+              <div class="overview-grid">
+                <div class="overview-item">
+                  <div class="overview-label">Balance</div>
+                  <div class="overview-value">
+                    {#if loadingBalance}
+                      <span class="loading-dots">...</span>
+                    {:else}
+                      {balance} ETH
+                    {/if}
+                  </div>
+                </div>
+                <div class="overview-item">
+                  <div class="overview-label">Address</div>
+                  <div class="overview-value mono">{shortenAddress(address)}</div>
+                </div>
+                {#if resolvedENSName}
+                  <div class="overview-item">
+                    <div class="overview-label">ENS Name</div>
+                    <div class="overview-value">{resolvedENSName}</div>
+                  </div>
+                {/if}
+              </div>
+            </div>
+          {:else if activeTab === 'transactions'}
+            <div class="tab-panel">
+              <h3>Recent Transactions</h3>
+              {#if loadingTransactions}
+                <div class="loading-state">
+                  <div class="spinner-small"></div>
+                  <p>Loading transactions...</p>
+                </div>
+              {:else if transactions.length > 0}
+                <div class="transactions-list">
+                  {#each transactions as tx}
+                    <div class="transaction-item">
+                      <div class="tx-hash">
+                        <Icon name="exchange-alt" size="1rem" />
+                        <code>{tx.hash.substring(0, 20)}...</code>
+                      </div>
+                      <div class="tx-details">
+                        <div class="tx-row">
+                          <span class="tx-label">From:</span>
+                          <code class="tx-address">{tx.from.substring(0, 15)}...</code>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">To:</span>
+                          <code class="tx-address">{tx.to.substring(0, 15)}...</code>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">Value:</span>
+                          <span class="tx-value">{tx.value} ETH</span>
+                        </div>
+                        <div class="tx-row">
+                          <span class="tx-label">Block:</span>
+                          <span class="tx-block">#{tx.blockNumber}</span>
+                        </div>
+                      </div>
+                    </div>
+                  {/each}
+                </div>
+              {:else}
+                <div class="empty-state">
+                  <Icon name="inbox" size="2.5rem" />
+                  <p>No recent transactions found</p>
+                </div>
+              {/if}
+            </div>
+          {:else if activeTab === 'tokens'}
+            <div class="tab-panel">
+              <h3>Token Holdings</h3>
+              <div class="empty-state">
+                <Icon name="coins" size="2.5rem" />
+                <p>Token tracking coming soon. Connect to view ERC-20 and NFT holdings.</p>
+              </div>
+            </div>
+          {/if}
+        </div>
       </div>
 
       <MultiChainView {address} />
@@ -1015,6 +1347,237 @@
     color: #94a3b8;
   }
 
+  /* Explorer Tabs Styles */
+  .explorer-tabs {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    margin-top: 2rem;
+  }
+
+  .address-view.dark .explorer-tabs {
+    background: rgba(30, 41, 59, 0.8);
+    border: 1px solid #334155;
+  }
+
+  .tabs-header {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .address-view.dark .tabs-header {
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+  }
+
+  .tab-btn {
+    flex: 1;
+    padding: 1rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: #64748b;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-bottom: 3px solid transparent;
+  }
+
+  .address-view.dark .tab-btn {
+    color: #94a3b8;
+  }
+
+  .tab-btn:hover {
+    background: rgba(59, 130, 246, 0.05);
+    color: var(--accent-primary);
+  }
+
+  .tab-btn.active {
+    color: var(--accent-primary);
+    border-bottom-color: var(--accent-primary);
+    background: rgba(59, 130, 246, 0.05);
+  }
+
+  .tabs-content {
+    padding: 2rem;
+  }
+
+  .tab-panel h3 {
+    color: #0f172a;
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+  }
+
+  .address-view.dark .tab-panel h3 {
+    color: #f1f5f9;
+  }
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .overview-item {
+    background: #f8fafc;
+    padding: 1.5rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .address-view.dark .overview-item {
+    background: #334155;
+    border: 1px solid #475569;
+  }
+
+  .overview-label {
+    color: #64748b;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+
+  .address-view.dark .overview-label {
+    color: #94a3b8;
+  }
+
+  .overview-value {
+    color: #0f172a;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  .address-view.dark .overview-value {
+    color: #f1f5f9;
+  }
+
+  .overview-value.mono {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+  }
+
+  .loading-dots {
+    display: inline-block;
+    color: #94a3b8;
+  }
+
+  .transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .transaction-item {
+    background: #f8fafc;
+    padding: 1.25rem;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    transition: all 0.2s ease;
+  }
+
+  .address-view.dark .transaction-item {
+    background: #334155;
+    border: 1px solid #475569;
+  }
+
+  .transaction-item:hover {
+    border-color: var(--accent-primary);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  }
+
+  .tx-hash {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: var(--accent-primary);
+    font-weight: 600;
+  }
+
+  .tx-hash code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.875rem;
+  }
+
+  .tx-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .tx-row {
+    display: flex;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+  }
+
+  .tx-label {
+    color: #64748b;
+    min-width: 50px;
+    font-weight: 500;
+  }
+
+  .address-view.dark .tx-label {
+    color: #94a3b8;
+  }
+
+  .tx-address,
+  .tx-value,
+  .tx-block {
+    color: #0f172a;
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+  }
+
+  .address-view.dark .tx-address,
+  .address-view.dark .tx-value,
+  .address-view.dark .tx-block {
+    color: #f1f5f9;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #94a3b8;
+  }
+
+  .spinner-small {
+    width: 40px;
+    height: 40px;
+    border: 3px solid #e2e8f0;
+    border-top-color: var(--accent-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+  }
+
+  .address-view.dark .spinner-small {
+    border-color: #334155;
+    border-top-color: var(--accent-primary);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #94a3b8;
+  }
+
+  .address-view.dark .empty-state {
+    color: #64748b;
+  }
+
+  .empty-state p {
+    margin-top: 1rem;
+    font-size: 1rem;
+  }
+
   @media (max-width: 768px) {
     .profile-card,
     .verification-box,
@@ -1032,6 +1595,25 @@
     }
 
     .links-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .tabs-header {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .tab-btn {
+      white-space: nowrap;
+      padding: 0.875rem 1rem;
+      font-size: 0.875rem;
+    }
+
+    .tabs-content {
+      padding: 1.5rem;
+    }
+
+    .overview-grid {
       grid-template-columns: 1fr;
     }
   }

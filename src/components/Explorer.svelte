@@ -1,7 +1,8 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, onMount } from 'svelte';
   import { ethers } from 'ethers';
   import { ethersStore } from '../stores/ethers';
+  import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { resolveAddressOrENS, isENSName } from '../utils/ens';
   import Icon from './Icon.svelte';
@@ -14,6 +15,13 @@
   let loading = false;
   let searchError = null;
   let provider = null;
+  let contract = null;
+  let stats = {
+    claimedAddresses: 0,
+    activeUsers: 0,
+    contractClaims: 0
+  };
+  let loadingStats = true;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -23,27 +31,85 @@
     provider = value.provider;
   });
 
-  // Mock data for demonstration
-  recentClaims = [
-    {
-      address: '0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb1',
-      name: 'Alice.eth',
-      avatar: '👤',
-      claimTime: Date.now() - 86400000
-    },
-    {
-      address: '0x9876543210987654321098765432109876543210',
-      name: 'Bob Crypto',
-      avatar: '🧑',
-      claimTime: Date.now() - 172800000
-    },
-    {
-      address: '0x1234567890123456789012345678901234567890',
-      name: 'ELTCOIN Token',
-      avatar: '🪙',
-      claimTime: Date.now() - 259200000
+  multiChainStore.subscribe(value => {
+    const primaryChainId = value.primaryChainId;
+    if (value.chains && value.chains[primaryChainId]) {
+      contract = value.chains[primaryChainId].contract;
     }
-  ];
+  });
+
+  onMount(async () => {
+    await loadRecentClaims();
+    await loadStats();
+  });
+
+  async function loadStats() {
+    loadingStats = true;
+    try {
+      if (contract) {
+        // Try to get stats from contract events
+        const filter = contract.filters.AddressClaimed();
+        const events = await contract.queryFilter(filter, -10000); // Last ~10k blocks
+        
+        stats.claimedAddresses = events.length;
+        stats.activeUsers = events.length; // Simplified: each claim is an active user
+        stats.contractClaims = events.length;
+      } else {
+        // Fallback to mock data when no contract is connected
+        stats.claimedAddresses = 0;
+        stats.activeUsers = 0;
+        stats.contractClaims = 0;
+      }
+    } catch (error) {
+      console.error('Error loading stats:', error);
+      // Keep stats at 0 on error
+    } finally {
+      loadingStats = false;
+    }
+  }
+
+  async function loadRecentClaims() {
+    try {
+      if (!contract) {
+        // No contract available, show empty state
+        recentClaims = [];
+        return;
+      }
+
+      // Get recent AddressClaimed events
+      const filter = contract.filters.AddressClaimed();
+      const events = await contract.queryFilter(filter, -5000); // Last ~5k blocks
+      
+      // Get the most recent 3 claims
+      const recentEvents = events.slice(-3).reverse();
+      
+      // Fetch claim data for each event
+      const claimsData = await Promise.all(
+        recentEvents.map(async (event) => {
+          try {
+            const address = event.args.claimedAddress;
+            const claim = await contract.getClaim(address);
+            
+            return {
+              address: address,
+              name: claim.metadata.name || 'Anonymous',
+              avatar: claim.metadata.avatar || '👤',
+              claimTime: Number(claim.claimTime) * 1000, // Convert to ms
+              isActive: claim.isActive
+            };
+          } catch (error) {
+            console.error('Error fetching claim:', error);
+            return null;
+          }
+        })
+      );
+      
+      recentClaims = claimsData.filter(claim => claim !== null && claim.isActive);
+    } catch (error) {
+      console.error('Error loading recent claims:', error);
+      recentClaims = [];
+    }
+  }
 
   async function handleSearch() {
     if (!searchAddress) {
@@ -64,9 +130,11 @@
           searchError = 'ENS name not found or could not be resolved';
         }
       } else {
-        // Validate address format before treating as direct address
-        if (ethers.isAddress(searchAddress)) {
-          dispatch('viewAddress', { view: 'address', address: searchAddress });
+        // Check if it's a valid address format (basic validation)
+        if (/^0x[a-fA-F0-9]{40}$/.test(searchAddress)) {
+          // Normalize the address to proper checksum
+          const normalizedAddress = ethers.getAddress(searchAddress.toLowerCase());
+          dispatch('viewAddress', { view: 'address', address: normalizedAddress });
         } else {
           searchError = 'Invalid address format. Please enter a valid Ethereum address or ENS name.';
         }
@@ -127,37 +195,44 @@
 
   <div class="stats">
     <div class="stat-card">
-      <div class="stat-value">1,234</div>
+      <div class="stat-value">{loadingStats ? '...' : stats.claimedAddresses}</div>
       <div class="stat-label">Claimed Addresses</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">567</div>
+      <div class="stat-value">{loadingStats ? '...' : stats.activeUsers}</div>
       <div class="stat-label">Active Users</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">89</div>
+      <div class="stat-value">{loadingStats ? '...' : stats.contractClaims}</div>
       <div class="stat-label">Contract Claims</div>
     </div>
   </div>
 
   <div class="recent-claims">
     <h3>Recent Claims</h3>
-    <div class="claims-grid">
-      {#each recentClaims as claim}
-        <div class="claim-card" on:click={() => viewAddress(claim.address)}>
-          <div class="claim-avatar">{claim.avatar}</div>
-          <div class="claim-info">
-            <div class="claim-name">{claim.name}</div>
-            <div class="claim-address">{shortenAddress(claim.address)}</div>
-            <div class="claim-time">{timeAgo(claim.claimTime)}</div>
+    {#if recentClaims.length > 0}
+      <div class="claims-grid">
+        {#each recentClaims as claim}
+          <div class="claim-card" on:click={() => viewAddress(claim.address)}>
+            <div class="claim-avatar">{claim.avatar}</div>
+            <div class="claim-info">
+              <div class="claim-name">{claim.name}</div>
+              <div class="claim-address">{shortenAddress(claim.address)}</div>
+              <div class="claim-time">{timeAgo(claim.claimTime)}</div>
+            </div>
+            <div class="claim-badge">
+              <Icon name="check" size="0.875rem" />
+              Claimed
+            </div>
           </div>
-          <div class="claim-badge">
-            <Icon name="check" size="0.875rem" />
-            Claimed
-          </div>
-        </div>
-      {/each}
-    </div>
+        {/each}
+      </div>
+    {:else}
+      <div class="empty-state">
+        <Icon name="inbox" size="3rem" />
+        <p>No claims found yet. Be the first to claim your address!</p>
+      </div>
+    {/if}
   </div>
 
   <div class="info-section">
@@ -398,6 +473,21 @@
 
   .explorer.dark .recent-claims h3 {
     color: #f1f5f9;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #94a3b8;
+  }
+
+  .explorer.dark .empty-state {
+    color: #64748b;
+  }
+
+  .empty-state p {
+    margin-top: 1rem;
+    font-size: 1rem;
   }
 
   .claims-grid {
