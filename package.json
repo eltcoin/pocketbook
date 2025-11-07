@@ -17,7 +17,9 @@
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:report": "playwright show-report",
-    "test:e2e:debug": "playwright test --debug"
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:simple": "playwright test --config=playwright.config.simple.js",
+    "test:setup": "bash scripts/setup-test-env.sh"
   },
   "keywords": [],
   "author": "",

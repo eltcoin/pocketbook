@@ -12,4 +12,4 @@ test-results/
 playwright-report/
 .playwright/
 .hardhat-node.pid
-test/e2e/fixtures/deployment.json
+# Note: test/e2e/fixtures/deployment.json is tracked for testing purposes
