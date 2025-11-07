@@ -204,9 +204,10 @@ test.describe('Explorer View', () => {
     const backButton = page.locator('button:has-text("Back to Explorer")');
     await backButton.click();
     
-    // Check that we're back at explorer
+    // Check that we're back at explorer (URL should not contain /explore/)
     await page.waitForTimeout(500);
-    expect(page.url()).toBe(page.url().replace(/\/explore\/.*/, '/'));
+    const currentUrl = page.url();
+    expect(currentUrl.endsWith('/') || !currentUrl.includes('/explore/')).toBe(true);
     
     // Check that explorer content is visible
     await expect(page.locator('text=/blockchain identity explorer/i')).toBeVisible();

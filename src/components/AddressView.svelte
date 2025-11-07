@@ -136,6 +136,9 @@
     loadingTransactions = true;
     try {
       // Get recent transactions (last 10 blocks as example)
+      // NOTE: This is a simplified implementation for demo purposes
+      // In production, use an indexer service (The Graph, Etherscan API, Alchemy, etc.)
+      // for better performance and complete transaction history
       const currentBlock = await provider.getBlockNumber();
       const txs = [];
       
