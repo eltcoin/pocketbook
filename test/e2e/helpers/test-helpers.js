@@ -2,7 +2,9 @@ const fs = require('fs');
 const path = require('path');
 
 // Constants
-const MOCK_SIGNATURE_LENGTH = 130; // 65 bytes * 2 hex chars (r + s + v)
+// Ethereum signature length: 65 bytes (r=32, s=32, v=1) * 2 hex chars + 0x prefix = 130 chars + 2 = 132 total
+// But for mock we use 130 without the 0x which is added separately
+const ETHEREUM_SIGNATURE_HEX_LENGTH = 130; // 65 bytes * 2 hex chars (r + s + v)
 
 /**
  * Load deployment information from fixtures
@@ -84,7 +86,7 @@ async function setupWallet(page, accountIndex = 0) {
           
           case 'personal_sign':
             // Simple mock signature - in real tests, we'd need proper signing
-            return '0x' + '0'.repeat(MOCK_SIGNATURE_LENGTH);
+            return '0x' + '0'.repeat(ETHEREUM_SIGNATURE_HEX_LENGTH);
           
           case 'eth_sendTransaction':
             // Mock transaction hash

@@ -43,7 +43,7 @@ async function main() {
       },
       {
         address: testUser3.address,
-        privateKey: TEST_PRIVATE_KEYS.ACCOUNT_2
+        privateKey: '0x7c852118294e51e653712a81e05800f419141751be58f605c371e15141b007a6' // Hardhat account #3
       }
     ],
     networkUrl: 'http://127.0.0.1:8545',
