@@ -26,18 +26,23 @@ The contract requires `viaIR: true` compilation setting because:
 
 ## Compilation Methods
 
-### Method 1: Using npm script (Recommended)
+### Method 1: Using npm scripts (Recommended)
 
 ```bash
-npm run compile:contract
+npm run compile:contract           # AddressClaim.sol only
+npm run compile:handle-registry    # AddressHandleRegistry.sol only
+npm run compile:all-contracts      # Executes both jobs sequentially
 ```
 
-This runs `scripts/compile-contract.js` which:
-1. Attempts to download Solidity 0.8.23 compiler
-2. Falls back to local solc if network unavailable
-3. Compiles with viaIR enabled
-4. Generates build artifacts in `build/` directory
-5. Updates `.env` with contract bytecode
+Each script leverages the shared compiler utility which:
+1. Attempts to download Solidity 0.8.23 (via IR) when a local 0.8.x build is missing
+2. Falls back to the locally installed `solc` if the download fails
+3. Compiles with `viaIR: true`, optimizer enabled (200 runs)
+4. Emits artifacts under `build/`
+5. Updates `.env` / `.env.local` with the appropriate bytecode env variables:
+   - `VITE_ADDRESS_CLAIM_BYTECODE` for `AddressClaim`
+   - `VITE_HANDLE_REGISTRY_BYTECODE` for `AddressHandleRegistry`
+   - `VITE_BIP39_VOCABULARY_BYTECODE` for `Bip39Vocabulary`
 
 ### Method 2: Manual compilation with solc 0.8.23+
 
@@ -89,9 +94,13 @@ Successful compilation produces:
 
 ```
 build/
-  AddressClaim.json    # Contract ABI and bytecode
+  AddressClaim.json
+  AddressHandleRegistry.json
+  Bip39Vocabulary.json
 .env (or .env.local)
-  VITE_ADDRESS_CLAIM_BYTECODE=0x...  # Updated with contract bytecode
+  VITE_ADDRESS_CLAIM_BYTECODE=0x...
+  VITE_HANDLE_REGISTRY_BYTECODE=0x...
+  VITE_BIP39_VOCABULARY_BYTECODE=0x...
 ```
 
 ## Verification

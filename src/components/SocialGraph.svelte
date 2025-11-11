@@ -52,7 +52,7 @@
     userAddress = value.primaryAddress;
     primaryChainId = value.primaryChainId;
     const chainEntry = value.chains?.[value.primaryChainId];
-    contract = chainEntry?.contract || null;
+    contract = chainEntry?.writeContract || chainEntry?.contract || null;
     primaryNetworkName = chainEntry?.networkConfig?.name || null;
     globalPendingRequests = value.pendingFriendRequests || { ...EMPTY_PENDING_REQUESTS };
   });

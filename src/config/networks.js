@@ -18,6 +18,7 @@ export const NETWORKS = {
       decimals: 18
     },
     contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_ETHEREUM || null
+    , handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_ETHEREUM || null
   },
   
   // Polygon (Matic) Mainnet
@@ -33,7 +34,8 @@ export const NETWORKS = {
       symbol: 'MATIC',
       decimals: 18
     },
-    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_POLYGON || null
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_POLYGON || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_POLYGON || null
   },
   
   // Binance Smart Chain Mainnet
@@ -49,7 +51,8 @@ export const NETWORKS = {
       symbol: 'BNB',
       decimals: 18
     },
-    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_BSC || null
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_BSC || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_BSC || null
   },
   
   // Arbitrum One
@@ -65,7 +68,8 @@ export const NETWORKS = {
       symbol: 'ETH',
       decimals: 18
     },
-    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_ARBITRUM || null
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_ARBITRUM || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_ARBITRUM || null
   },
   
   // Optimism
@@ -81,7 +85,8 @@ export const NETWORKS = {
       symbol: 'ETH',
       decimals: 18
     },
-    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_OPTIMISM || null
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_OPTIMISM || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_OPTIMISM || null
   },
   
   // Avalanche C-Chain
@@ -97,7 +102,8 @@ export const NETWORKS = {
       symbol: 'AVAX',
       decimals: 18
     },
-    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_AVALANCHE || null
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_AVALANCHE || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_AVALANCHE || null
   },
   
   // Testnets
@@ -116,6 +122,7 @@ export const NETWORKS = {
       decimals: 18
     },
     contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_SEPOLIA || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_SEPOLIA || null,
     isTestnet: true
   },
   
@@ -133,6 +140,7 @@ export const NETWORKS = {
       decimals: 18
     },
     contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_MUMBAI || null,
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_MUMBAI || null,
     isTestnet: true
   }
 };

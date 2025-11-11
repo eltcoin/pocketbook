@@ -20,17 +20,42 @@ npm run dev
 
 Visit `http://localhost:3000` and connect your MetaMask wallet to get started!
 
-### 🔨 Compile the Contract
+### 🔨 Compile the Contracts
 
 ```bash
+# AddressClaim only
 npm run compile:contract
+
+# AddressHandleRegistry only
+npm run compile:handle-registry
+
+# Run both back-to-back
+npm run compile:all-contracts
 ```
 
-This command compiles `contracts/AddressClaim.sol`, writes the artifact to `build/AddressClaim.json`, and updates `VITE_ADDRESS_CLAIM_BYTECODE` in your local `.env` file so the admin deploy panel can access the bytecode. Ensure you have Solidity `0.8.x` available (the script fetches it automatically when online).
+- `compile:contract` builds `contracts/AddressClaim.sol`, writes `build/AddressClaim.json`, and refreshes `VITE_ADDRESS_CLAIM_BYTECODE` inside your `.env`.
+- `compile:handle-registry` auto-generates `contracts/generated/Bip39Vocabulary.sol` from the BIP39 text file, builds both `AddressHandleRegistry` and `Bip39Vocabulary`, and refreshes `VITE_HANDLE_REGISTRY_BYTECODE` / `VITE_BIP39_VOCABULARY_BYTECODE`.
+- `compile:all-contracts` is a convenience job that executes both compilers in sequence so CI/CD pipelines can produce every artifact with a single command.
+
+Each script automatically fetches Solidity `0.8.23` (via IR with 200 optimizer runs) if the matching compiler is not already available locally.
+
+### 🔡 Word Handles
+
+Pocketbook now ships with deterministic, human-readable handles backed by the `AddressHandleRegistry` contract and the BIP39 English vocabulary (stored at `public/wordlists/bip39-english.txt`). Each wallet can reserve a unique phrase whose encoded bytes map 1:1 to the registry entry.
+
+1. Deploy `contracts/AddressHandleRegistry.sol` to any network where you want handles enabled. Provide:
+   - `vocabLength` — number of entries in your vocabulary (2048 for the default BIP39 word list).
+   - `maxLength` — maximum number of words per handle.
+   - `vocabHash` — `sha256` hash of the vocabulary file contents.
+2. Populate the matching `VITE_HANDLE_REGISTRY_ADDRESS_<NETWORK>` variables in your `.env` file (e.g. `VITE_HANDLE_REGISTRY_ADDRESS_SEPOLIA`).
+3. Run `npm run dev` and connect a wallet on a supported chain. The claim form will suggest deterministic handles and let users mint/release them directly from the UI.
+
+The explorer and address detail views automatically display claimed handles when a registry is configured on the active chain.
 
 ### ✨ Features
 
 - 🎯 **Address Claiming** - Prove ownership and attach verified metadata to any address
+- 🧩 **Word Handles** - Deterministically mint BIP39-based phrases that map directly to addresses
 - 🔐 **Cryptographic Security** - All claims signed and verified on-chain
 - 🆔 **DID Support** - W3C compliant Decentralized Identifiers (did:ethr) for self-sovereign identity
 - 🏷️ **ENS Integration** - Use human-readable names (name.eth) instead of addresses with full ENS resolution and reverse lookup

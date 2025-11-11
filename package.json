@@ -11,6 +11,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "compile:contract": "node scripts/compile-contract.js",
+    "compile:handle-registry": "node scripts/compile-handle-registry.js",
+    "compile:all-contracts": "npm run compile:contract && npm run compile:handle-registry",
     "test": "hardhat test",
     "test:security": "hardhat test test/hardhat/AddressClaim.security.test.js",
     "test:e2e": "playwright test",

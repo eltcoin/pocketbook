@@ -1,16 +1,20 @@
 <script>
-  import { createEventDispatcher } from 'svelte';
-  import { multiChainStore, primaryNetwork } from '../stores/multichain';
+  import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
-  import { navigate } from '../utils/router';
+  import { currentRoute, navigate } from '../utils/router';
   import NetworkSelector from './NetworkSelector.svelte';
   import Icon from './Icon.svelte';
 
-  const dispatch = createEventDispatcher();
+  const menuItems = [
+    { id: 'explorer', label: 'Explorer', icon: 'compass' },
+    { id: 'claim', label: 'Claim Address', icon: 'id-card' },
+    { id: 'admin', label: 'Admin', icon: 'tools', variant: 'danger' }
+  ];
   
   let connected = false;
   let address = null;
   let darkMode = false;
+  let activeView = 'explorer';
 
   multiChainStore.subscribe(value => {
     connected = value.connected;
@@ -19,6 +23,11 @@
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
+  });
+
+  currentRoute.subscribe(route => {
+    const view = route.view || 'explorer';
+    activeView = view === 'address' ? 'explorer' : view;
   });
 
   async function handleConnect() {
@@ -63,19 +72,19 @@
       <h1>Pocketbook</h1>
     </div>
 
-    <nav>
-      <button class="nav-btn" on:click={() => navigateTo('explorer')}>
-        <Icon name="compass" size="1.125rem" />
-        <span>Explorer</span>
-      </button>
-      <button class="nav-btn" on:click={() => navigateTo('claim')}>
-        <Icon name="id-card" size="1.125rem" />
-        <span>Claim Address</span>
-      </button>
-      <button class="nav-btn admin-btn" on:click={() => navigateTo('admin')}>
-        <Icon name="tools" size="1.125rem" />
-        <span>Admin</span>
-      </button>
+    <nav class="menu" aria-label="Primary">
+      {#each menuItems as item}
+        <button
+          class="menu-btn"
+          class:active={activeView === item.id}
+          class:danger={item.variant === 'danger'}
+          on:click={() => navigateTo(item.id)}
+          aria-current={activeView === item.id ? 'page' : undefined}
+        >
+          <Icon name={item.icon} size="1.125rem" />
+          <span>{item.label}</span>
+        </button>
+      {/each}
     </nav>
 
     <div class="controls">
@@ -122,10 +131,10 @@
   .header-content {
     max-width: 1400px;
     margin: 0 auto;
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
     align-items: center;
-    justify-content: space-between;
-    gap: 2rem;
+    gap: 1.5rem;
   }
 
   .logo {
@@ -134,6 +143,7 @@
     gap: 0.875rem;
     cursor: pointer;
     transition: opacity 0.2s ease;
+    justify-self: start;
   }
 
   .logo:hover {
@@ -158,68 +168,92 @@
     color: #f1f5f9;
   }
 
-  nav {
+  .menu {
     display: flex;
-    gap: 0.5rem;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    background: rgba(15, 23, 42, 0.04);
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+    overflow-x: auto;
+    justify-self: center;
   }
 
-  .nav-btn {
+  .menu::-webkit-scrollbar {
+    display: none;
+  }
+
+  header.dark .menu {
+    background: rgba(15, 23, 42, 0.6);
+    border-color: rgba(148, 163, 184, 0.35);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.5);
+  }
+
+  .menu-btn {
     background: transparent;
     border: none;
-    color: #64748b;
+    color: #475569;
     font-size: 0.9375rem;
-    font-weight: 500;
-    padding: 0.625rem 1.125rem;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
     cursor: pointer;
-    border-radius: 10px;
+    border-radius: 999px;
     transition: all 0.2s ease;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    letter-spacing: -0.01em;
   }
 
-  header.dark .nav-btn {
-    color: #94a3b8;
+  header.dark .menu-btn {
+    color: #cbd5e1;
   }
 
-  .nav-btn:hover {
-    background: var(--accent-primary-light);
+  .menu-btn:hover {
+    background: rgba(59, 130, 246, 0.12);
     color: var(--accent-primary);
   }
 
-  header.dark .nav-btn:hover {
-    background: rgba(59, 130, 246, 0.1);
-    color: var(--accent-primary);
+  header.dark .menu-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
   }
 
-  .admin-btn {
-    background: #fef3c7;
-    color: #92400e;
-    border: 1px solid #fde68a;
+  .menu-btn.active {
+    background: #ffffff;
+    color: #0f172a;
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
   }
 
-  header.dark .admin-btn {
-    background: #422006;
-    color: #fde68a;
-    border: 1px solid #78350f;
+  header.dark .menu-btn.active {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    color: #ffffff;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.55);
   }
 
-  .admin-btn:hover {
-    background: #fde68a;
-    color: #78350f;
-    border-color: #fcd34d;
+  .menu-btn.danger {
+    color: #b45309;
   }
 
-  header.dark .admin-btn:hover {
-    background: #78350f;
-    color: #fef3c7;
-    border-color: #92400e;
+  header.dark .menu-btn.danger {
+    color: #fcd34d;
+  }
+
+  .menu-btn.danger.active {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    color: #ffffff;
+    box-shadow: 0 12px 26px rgba(249, 115, 22, 0.45);
   }
 
   .controls {
     display: flex;
     align-items: center;
     gap: 0.75rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    justify-self: end;
   }
 
   .theme-toggle {
@@ -331,24 +365,47 @@
     color: #f1f5f9;
   }
 
+  @media (max-width: 1100px) {
+    .header-content {
+      grid-template-columns: 1fr;
+      justify-items: center;
+      text-align: center;
+    }
+
+    .logo {
+      justify-content: center;
+      width: 100%;
+    }
+
+    .menu {
+      justify-content: center;
+      width: 100%;
+      flex-wrap: wrap;
+    }
+
+    .controls {
+      justify-content: center;
+      justify-self: stretch;
+    }
+  }
+
   @media (max-width: 768px) {
     header {
       padding: 1rem;
     }
 
-    .header-content {
-      flex-wrap: wrap;
-      gap: 1rem;
+    .logo h1 {
+      font-size: 1.125rem;
     }
 
-    nav {
-      order: 3;
+    .menu-btn {
       width: 100%;
       justify-content: center;
     }
 
-    .logo h1 {
-      font-size: 1.125rem;
+    .controls {
+      flex-direction: column;
+      gap: 0.5rem;
     }
   }
 </style>

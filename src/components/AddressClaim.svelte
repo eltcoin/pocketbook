@@ -1,8 +1,10 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { ethers } from 'ethers';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { lookupENSName } from '../utils/ens';
+  import { loadWordlist, encodeHandle, formatHandle, decodeHandle, suggestHandleIndices } from '../utils/wordhandles';
 
   const dispatch = createEventDispatcher();
 
@@ -14,6 +16,10 @@
   let error = null;
   let ensName = null;
   let provider = null;
+  let hasExistingClaim = false;
+  let checkingClaimStatus = false;
+  let claimStatusError = null;
+  let primaryChainId = null;
 
   // Form data
   let formData = {
@@ -27,6 +33,29 @@
     isPrivate: false
   };
 
+  // Word handle state
+  let handleRegistrySupported = false;
+  let handleRegistryLoading = false;
+  let handleRegistryError = null;
+  let handleRegistryInfo = null;
+  let existingHandle = null;
+  let handleSuggestion = null;
+  let handleSuggestionLoading = false;
+  let handleSuggestionError = null;
+  let handleClaiming = false;
+  let handleClaimError = null;
+  let handleClaimSuccess = false;
+  let releaseHandleLoading = false;
+  let releaseHandleError = null;
+
+  let wordlist = [];
+  let wordlistLoading = false;
+  let wordlistError = null;
+  let wordlistPromise = null;
+
+  let handleStateRequestId = 0;
+  let handleSuggestionRequestId = 0;
+
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
   });
@@ -34,7 +63,252 @@
   let unsubscribeMultiChain;
   let currentLookupId = 0; // Track the latest lookup request
   let isMounted = true; // Track component mount state
-  
+  let claimStatusRequestId = 0;
+
+  function resetHandleState() {
+    handleStateRequestId += 1;
+    handleSuggestionRequestId += 1;
+    handleRegistrySupported = false;
+    handleRegistryLoading = false;
+    handleRegistryError = null;
+    handleRegistryInfo = null;
+    existingHandle = null;
+    handleSuggestion = null;
+    handleSuggestionError = null;
+    handleSuggestionLoading = false;
+    handleClaiming = false;
+    handleClaimError = null;
+    handleClaimSuccess = false;
+    releaseHandleLoading = false;
+    releaseHandleError = null;
+  }
+
+  async function ensureWordlistLoaded() {
+    if (wordlist.length) {
+      return wordlist;
+    }
+    if (wordlistPromise) {
+      return wordlistPromise;
+    }
+    wordlistLoading = true;
+    wordlistError = null;
+    wordlistPromise = loadWordlist()
+      .then(list => {
+        wordlist = list;
+        return list;
+      })
+      .catch(err => {
+        wordlistError = err?.message || 'Failed to load wordlist';
+        throw err;
+      })
+      .finally(() => {
+        wordlistLoading = false;
+        wordlistPromise = null;
+      });
+    return wordlistPromise;
+  }
+
+  function buildHandleSummary(encodedHandle) {
+    try {
+      const indices = decodeHandle(encodedHandle);
+      const vocab = wordlist;
+      const hasVocab = vocab.length > 0 && indices.every(idx => idx < vocab.length);
+      return {
+        indices,
+        words: hasVocab ? indices.map(idx => vocab[idx]) : [],
+        phrase: hasVocab ? formatHandle(indices, vocab) : indices.join('-'),
+        hex: ethers.hexlify(encodedHandle)
+      };
+    } catch (err) {
+      const hexValue = ethers.hexlify(encodedHandle);
+      return {
+        indices: [],
+        words: [],
+        phrase: hexValue,
+        hex: hexValue
+      };
+    }
+  }
+
+  async function syncHandleRegistryState(targetAddress, chainId) {
+    if (!targetAddress || !chainId || !isMounted) {
+      resetHandleState();
+      return;
+    }
+
+    const requestId = ++handleStateRequestId;
+    handleRegistryLoading = true;
+    handleRegistryError = null;
+
+    try {
+      const infoResult = await multiChainStore.getHandleRegistryInfo(chainId);
+      if (!isMounted || requestId !== handleStateRequestId) {
+        return;
+      }
+
+      if (!infoResult?.success) {
+        console.debug('[wordhandles] registry info unavailable', infoResult?.error);
+        handleRegistrySupported = false;
+        handleRegistryInfo = null;
+        handleRegistryError = infoResult?.error || 'Handle registry unavailable on this chain';
+        existingHandle = null;
+        return;
+      }
+
+      handleRegistrySupported = true;
+      handleRegistryInfo = infoResult.info;
+      handleRegistryError = null;
+
+      try {
+        await ensureWordlistLoaded();
+      } catch (wordErr) {
+        console.warn('Wordlist load failed:', wordErr);
+      }
+
+      const handleResult = await multiChainStore.getHandleForAddress(chainId, targetAddress);
+      if (!isMounted || requestId !== handleStateRequestId) {
+        return;
+      }
+
+      if (handleResult?.success && handleResult.handle) {
+        existingHandle = buildHandleSummary(handleResult.handle);
+        handleSuggestion = null;
+        handleClaimSuccess = false;
+      } else {
+        existingHandle = null;
+      }
+
+      if (!existingHandle && handleRegistrySupported && !handleSuggestion && !handleSuggestionLoading) {
+        generateHandleSuggestion();
+      }
+    } catch (err) {
+      if (!isMounted || requestId !== handleStateRequestId) {
+        return;
+      }
+      console.error('[wordhandles] failed to sync handle registry state', err);
+      handleRegistrySupported = false;
+      handleRegistryInfo = null;
+      handleRegistryError = err?.message || 'Unable to load handle registry';
+      existingHandle = null;
+    } finally {
+      if (requestId === handleStateRequestId) {
+        handleRegistryLoading = false;
+      }
+    }
+  }
+
+  async function generateHandleSuggestion({ reset = false } = {}) {
+    if (!handleRegistrySupported || !address || !primaryChainId) {
+      return;
+    }
+
+    const requestId = ++handleSuggestionRequestId;
+    handleSuggestionLoading = true;
+    handleSuggestionError = null;
+    handleClaimError = null;
+
+    let seedSalt = 0;
+    if (reset && handleSuggestion?.encoded && handleRegistryInfo?.vocabHash) {
+      const saltSource = ethers.concat([
+        ethers.getBytes(handleRegistryInfo.vocabHash),
+        handleSuggestion.encoded
+      ]);
+      const hash = ethers.keccak256(saltSource);
+      const slice = ethers.dataSlice(hash, ethers.dataLength(hash) - 4);
+      seedSalt = Number(BigInt(ethers.hexlify(slice)) & BigInt(0xffffffff));
+      handleSuggestion = null;
+    }
+
+    try {
+      const vocab = await ensureWordlistLoaded();
+      const registryMax = handleRegistryInfo?.maxLength ?? 4;
+      const maxTokens = Math.min(Math.max(1, registryMax), 6);
+      const minTokens = 1;
+      const indices = await suggestHandleIndices({
+        address,
+        vocabSize: vocab.length,
+        minLength: minTokens,
+        maxLength: maxTokens,
+        isClaimed: async (encoded) => {
+          const availability = await multiChainStore.isHandleTakenOnChain(primaryChainId, encoded);
+          if (!availability?.success) {
+            throw new Error(availability?.error || 'Unable to verify handle availability');
+          }
+          return availability.isTaken;
+        },
+        seedSalt
+      });
+
+      if (!isMounted || requestId !== handleSuggestionRequestId) {
+        return;
+      }
+
+      const encoded = encodeHandle(indices);
+      handleSuggestion = {
+        indices,
+        words: indices.map(idx => vocab[idx]),
+        phrase: formatHandle(indices, vocab),
+        hex: ethers.hexlify(encoded),
+        encoded,
+        seedSalt
+      };
+    } catch (err) {
+      if (!isMounted || requestId !== handleSuggestionRequestId) {
+        return;
+      }
+      handleSuggestion = null;
+      handleSuggestionError = err?.message || 'Failed to generate handle suggestion';
+    } finally {
+      if (requestId === handleSuggestionRequestId) {
+        handleSuggestionLoading = false;
+      }
+    }
+  }
+
+  async function claimWordHandle() {
+    if (!handleSuggestion?.encoded) {
+      return;
+    }
+
+    handleClaiming = true;
+    handleClaimError = null;
+    handleClaimSuccess = false;
+    releaseHandleError = null;
+
+    try {
+      await multiChainStore.claimHandleOnPrimaryChain(handleSuggestion.encoded);
+      handleClaimSuccess = true;
+      handleSuggestion = null;
+      await syncHandleRegistryState(address, primaryChainId);
+    } catch (err) {
+      handleClaimError = err?.message || 'Failed to claim handle';
+      console.error('Handle claim error:', err);
+    } finally {
+      handleClaiming = false;
+    }
+  }
+
+  async function releaseWordHandle() {
+    if (!existingHandle) {
+      return;
+    }
+
+    releaseHandleLoading = true;
+    releaseHandleError = null;
+    handleClaimError = null;
+    handleClaimSuccess = false;
+
+    try {
+      await multiChainStore.releaseHandleOnPrimaryChain();
+      await syncHandleRegistryState(address, primaryChainId);
+    } catch (err) {
+      releaseHandleError = err?.message || 'Failed to release handle';
+      console.error('Handle release error:', err);
+    } finally {
+      releaseHandleLoading = false;
+    }
+  }
+
   onMount(() => {
     isMounted = true;
     
@@ -43,7 +317,9 @@
       connected = value.connected;
       const newAddress = value.primaryAddress;
       const newProvider = value.chains?.[value.primaryChainId]?.provider || null;
-      
+      const newChainId = value.primaryChainId;
+      primaryChainId = newChainId;
+
       // If address or provider changed, update and lookup ENS name
       if (newAddress !== address || newProvider !== provider) {
         address = newAddress;
@@ -72,6 +348,15 @@
           ensName = null;
         }
       }
+
+      if (address && newChainId) {
+        refreshClaimStatus(address, newChainId);
+        syncHandleRegistryState(address, newChainId);
+      } else {
+        hasExistingClaim = false;
+        claimStatusError = null;
+        resetHandleState();
+      }
     });
 
     // Cleanup subscription on unmount
@@ -98,26 +383,73 @@
     error = null;
 
     try {
-      // Create message to sign
       const message = `Claiming address ${address} with name: ${formData.name}`;
       const signature = await multiChainStore.signMessage(message);
 
-      // In a real implementation, this would call the smart contract
-      console.log('Claiming address with signature:', signature);
+      const result = await multiChainStore.claimAddressOnPrimaryChain({
+        signature,
+        name: formData.name,
+        avatar: formData.avatar,
+        bio: formData.bio,
+        website: formData.website,
+        twitter: formData.twitter,
+        github: formData.github,
+        publicKey: null,
+        pgpSignature: formData.pgpSignature,
+        isPrivate: formData.isPrivate,
+        ipfsCID: ''
+      });
 
-      // Simulate success
+      success = true;
+      loading = false;
+      console.log('Address claimed on-chain:', result.transactionHash);
+      hasExistingClaim = true;
+      claimStatusError = null;
+
       setTimeout(() => {
-        success = true;
-        loading = false;
-        setTimeout(() => {
-          dispatch('viewChange', { view: 'address', address });
-        }, 2000);
-      }, 1500);
-
+        dispatch('viewChange', { view: 'address', address });
+      }, 1800);
     } catch (err) {
       loading = false;
-      error = err.message || 'Failed to claim address';
+      error = err?.message || 'Failed to claim address';
       console.error('Claim error:', err);
+    }
+  }
+
+  async function refreshClaimStatus(targetAddress, chainId) {
+    if (!targetAddress || !chainId) {
+      hasExistingClaim = false;
+      claimStatusError = null;
+      return;
+    }
+
+    const requestId = ++claimStatusRequestId;
+    checkingClaimStatus = true;
+    claimStatusError = null;
+
+    try {
+      const result = await multiChainStore.checkClaimOnChain(chainId, targetAddress);
+      if (!isMounted || requestId !== claimStatusRequestId) {
+        return;
+      }
+      if (result?.success) {
+        hasExistingClaim = Boolean(result.isClaimed);
+        claimStatusError = null;
+      } else {
+        hasExistingClaim = false;
+        claimStatusError = result?.error || null;
+      }
+    } catch (err) {
+      if (!isMounted || requestId !== claimStatusRequestId) {
+        return;
+      }
+      hasExistingClaim = false;
+      claimStatusError = err?.message || 'Unable to check claim status';
+      console.error('Claim status check error:', err);
+    } finally {
+      if (requestId === claimStatusRequestId) {
+        checkingClaimStatus = false;
+      }
     }
   }
 
@@ -153,6 +485,22 @@
           </div>
         {/if}
       </div>
+
+      {#if checkingClaimStatus}
+        <div class="status-box">Checking existing claim status...</div>
+      {:else if claimStatusError}
+        <div class="error-box">
+          Unable to verify existing claim status: {claimStatusError}
+        </div>
+      {:else if hasExistingClaim}
+        <div class="warning-box already-claimed">
+          <div class="warning-icon">ℹ️</div>
+          <div>
+            <h3>Address already claimed</h3>
+            <p>This wallet has an active claim on the current network. You can update or revoke it from the explorer.</p>
+          </div>
+        </div>
+      {/if}
 
       <div class="form-group">
         <label for="name">Display Name *</label>
@@ -248,7 +596,7 @@
       {/if}
 
       <div class="form-actions">
-        <button class="btn-claim" on:click={handleClaim} disabled={loading || success}>
+        <button class="btn-claim" on:click={handleClaim} disabled={loading || success || hasExistingClaim || checkingClaimStatus}>
           {#if loading}
             Claiming...
           {:else if success}
@@ -257,6 +605,116 @@
             Claim Address
           {/if}
         </button>
+      </div>
+
+      <div class="handle-section">
+        <div class="handle-header">
+          <div>
+            <h3>Word Handles</h3>
+            <p>Deterministic BIP39 phrases you can reserve on-chain.</p>
+          </div>
+          <div class="handle-caption">
+            {#if handleRegistryInfo}
+              Vocabulary: {handleRegistryInfo.vocabLength} • Max words: {handleRegistryInfo.maxLength}
+            {/if}
+            {#if wordlistLoading}
+              <span class="handle-pill">Loading vocabulary…</span>
+            {/if}
+          </div>
+        </div>
+
+        {#if handleRegistryLoading}
+          <div class="status-box">Checking handle registry…</div>
+        {:else if handleRegistrySupported}
+          {#if existingHandle}
+            <div class="handle-card claimed">
+              <div class="handle-label">Your handle</div>
+              <div class="handle-phrase">{existingHandle.phrase}</div>
+              <div class="handle-meta">
+                <code>{existingHandle.hex}</code>
+                {#if existingHandle.indices.length}
+                  <span>Indices: {existingHandle.indices.join(', ')}</span>
+                {/if}
+              </div>
+              {#if releaseHandleError}
+                <div class="error-box inline">{releaseHandleError}</div>
+              {/if}
+              <button class="btn-release" on:click={releaseWordHandle} disabled={releaseHandleLoading}>
+                {#if releaseHandleLoading}
+                  Releasing...
+                {:else}
+                  Release Handle
+                {/if}
+              </button>
+            </div>
+          {:else}
+            <div class="handle-card">
+              {#if handleSuggestion}
+                <div class="handle-phrase">{handleSuggestion.phrase}</div>
+                <div class="handle-meta">
+                  <code>{handleSuggestion.hex}</code>
+                  <span>{handleSuggestion.words.join(' · ')}</span>
+                </div>
+              {:else}
+                <p class="handle-placeholder">
+                  {#if handleSuggestionLoading}
+                    Generating the next available handle…
+                  {:else}
+                    Generate a phrase to reserve it permanently.
+                  {/if}
+                </p>
+              {/if}
+
+              {#if handleSuggestionError}
+                <div class="error-box inline">{handleSuggestionError}</div>
+              {/if}
+
+              {#if handleClaimError}
+                <div class="error-box inline">{handleClaimError}</div>
+              {/if}
+
+              {#if wordlistError}
+                <div class="error-box inline">Vocabulary error: {wordlistError}</div>
+              {/if}
+
+              {#if handleClaimSuccess}
+                <div class="success-box inline">Handle claimed successfully!</div>
+              {/if}
+
+              <div class="handle-actions">
+                <button
+                  class="btn-secondary"
+                  on:click={() => generateHandleSuggestion({ reset: true })}
+                  disabled={handleSuggestionLoading || handleClaiming || wordlistLoading}
+                >
+                  {#if handleSuggestionLoading}
+                    Working...
+                  {:else if handleSuggestion}
+                    Suggest Another
+                  {:else}
+                    Generate Suggestion
+                  {/if}
+                </button>
+                <button
+                  class="btn-handle-claim"
+                  on:click={claimWordHandle}
+                  disabled={!handleSuggestion || handleSuggestionLoading || handleClaiming}
+                >
+                  {#if handleClaiming}
+                    Claiming...
+                  {:else}
+                    Claim Word Handle
+                  {/if}
+                </button>
+              </div>
+            </div>
+          {/if}
+        {:else}
+          <div class="info-box subtle">
+            <strong>Word handles unavailable</strong>
+            <p>{handleRegistryError || 'This network does not have a handle registry yet.'}</p>
+          </div>
+        {/if}
       </div>
 
       <div class="info-box">
@@ -337,6 +795,10 @@
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
   }
 
+  .warning-box.already-claimed {
+    margin-bottom: 1.5rem;
+  }
+
   .claim-container.dark .warning-box {
     background: #1e293b;
     border-color: #334155;
@@ -366,6 +828,22 @@
     padding: 2rem;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+  }
+
+  .status-box {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    margin-bottom: 1.5rem;
+    font-weight: 500;
+  }
+
+  .claim-container.dark .status-box {
+    background: #334155;
+    border-color: #475569;
+    color: #cbd5e1;
   }
 
   .claim-container.dark .claim-form {
@@ -574,6 +1052,228 @@
     cursor: not-allowed;
   }
 
+  .handle-section {
+    margin-top: 2.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .claim-container.dark .handle-section {
+    border-top-color: #334155;
+  }
+
+  .handle-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .handle-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    color: #0f172a;
+  }
+
+  .claim-container.dark .handle-header h3 {
+    color: #f1f5f9;
+  }
+
+  .handle-header p {
+    margin: 0.35rem 0 0;
+    color: #64748b;
+  }
+
+  .claim-container.dark .handle-header p {
+    color: #94a3b8;
+  }
+
+  .handle-caption {
+    font-size: 0.9rem;
+    color: #475569;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: flex-end;
+  }
+
+  .claim-container.dark .handle-caption {
+    color: #cbd5e1;
+  }
+
+  .handle-pill {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 0.15rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .claim-container.dark .handle-pill {
+    background: #1d4ed8;
+    color: #e0f2fe;
+  }
+
+  .handle-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.5rem;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+    margin-top: 1rem;
+  }
+
+  .claim-container.dark .handle-card {
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: none;
+  }
+
+  .handle-card.claimed {
+    border-color: #0f172a;
+  }
+
+  .claim-container.dark .handle-card.claimed {
+    border-color: #f1f5f9;
+  }
+
+  .handle-label {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin-bottom: 0.35rem;
+  }
+
+  .claim-container.dark .handle-label {
+    color: #cbd5e1;
+  }
+
+  .handle-phrase {
+    font-size: 1.35rem;
+    font-weight: 700;
+    color: #0f172a;
+    word-break: break-word;
+  }
+
+  .claim-container.dark .handle-phrase {
+    color: #f8fafc;
+  }
+
+  .handle-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    margin-top: 0.75rem;
+    color: #475569;
+    font-size: 0.95rem;
+  }
+
+  .claim-container.dark .handle-meta {
+    color: #cbd5e1;
+  }
+
+  .handle-meta code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    background: #f1f5f9;
+    padding: 0.35rem 0.6rem;
+    border-radius: 8px;
+  }
+
+  .claim-container.dark .handle-meta code {
+    background: #0f172a;
+    color: #f8fafc;
+  }
+
+  .handle-placeholder {
+    margin: 0;
+    color: #94a3b8;
+  }
+
+  .handle-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .btn-secondary {
+    flex: 1;
+    min-width: 180px;
+    border: 1px solid #c7d2fe;
+    background: #eef2ff;
+    color: #1e3a8a;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-secondary:hover:not(:disabled) {
+    border-color: #818cf8;
+    transform: translateY(-1px);
+  }
+
+  .claim-container.dark .btn-secondary {
+    border-color: #475569;
+    background: #1e293b;
+    color: #e0e7ff;
+  }
+
+  .btn-secondary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-handle-claim {
+    flex: 1;
+    min-width: 180px;
+    border: none;
+    border-radius: 10px;
+    padding: 0.85rem 1rem;
+    font-weight: 600;
+    background: var(--accent-primary, #3b82f6);
+    color: #ffffff;
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.25);
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .btn-handle-claim:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  .btn-handle-claim:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .btn-release {
+    margin-top: 1rem;
+    border: 1px solid #fecaca;
+    background: #fff1f2;
+    color: #b91c1c;
+    border-radius: 10px;
+    padding: 0.75rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .claim-container.dark .btn-release {
+    background: #3f1d1d;
+    border-color: #fecaca;
+    color: #fecaca;
+  }
+
+  .btn-release:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
   .info-box {
     margin-top: 2rem;
     padding: 1.5rem;
@@ -612,6 +1312,16 @@
 
   .info-box li {
     margin-bottom: 0.5rem;
+  }
+
+  .info-box.subtle {
+    margin-top: 1rem;
+  }
+
+  .error-box.inline,
+  .success-box.inline {
+    margin-top: 1rem;
+    margin-bottom: 0;
   }
 
   @media (max-width: 768px) {

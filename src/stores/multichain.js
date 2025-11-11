@@ -3,6 +3,7 @@ import { ethers } from 'ethers';
 import { getSupportedNetworks, getNetworkByChainId } from '../config/networks';
 import { parseClaimData } from '../utils/claimParser';
 import { calculateReputation, getReputationSummary } from '../utils/reputation';
+import { handleRegistryABI } from '../config/handleRegistryABI';
 
 // Constants
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -33,6 +34,12 @@ function createMultiChainStore() {
   });
   const baseStore = { subscribe };
 
+  const providerOptions = {
+    batchMaxCount: 1,
+    batchStallTime: 0,
+    pollingInterval: 4000
+  };
+
   // Contract ABI
   const contractABI = [
     "function claimAddress(address _address, bytes memory _signature, string memory _name, string memory _avatar, string memory _bio, string memory _website, string memory _twitter, string memory _github, bytes memory _publicKey, string memory _pgpSignature, bool _isPrivate, string memory _ipfsCID) public",
@@ -47,6 +54,10 @@ function createMultiChainStore() {
     "function getPGPSignature(address _address) public view returns (string memory)",
     "function getPublicKey(address _address) public view returns (bytes memory)",
     "function getDIDRoutingInfo(address _address) public view returns (string memory did, string memory ipfsCID)",
+    "function getTotalClaims() public view returns (uint256)",
+    "function getClaimedAddressesCount() public view returns (uint256)",
+    "function getClaimedAddresses(uint256 offset, uint256 limit) public view returns (address[] memory)",
+    "function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory addresses, uint256 total)",
     "function followUser(address _userToFollow) public",
     "function unfollowUser(address _userToUnfollow) public",
     "function sendFriendRequest(address _to) public",
@@ -67,6 +78,9 @@ function createMultiChainStore() {
     "function getAttestationsReceived(address _subject) public view returns (address[] memory)",
     "function getAttestationSignature(address _attester, address _subject) public view returns (bytes memory)",
     "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
+    "function getTotalClaims() public view returns (uint256)",
+    "function getClaimedAddresses(uint256 start, uint256 count) public view returns (address[] memory)",
+    "function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory)",
     "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)",
     "event IPFSMetadataStored(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
     "event IPFSMetadataUpdated(address indexed claimedAddress, string ipfsCID, uint256 timestamp)",
@@ -108,21 +122,42 @@ function createMultiChainStore() {
         }
 
         // Create provider for this network using public RPC
-        const provider = new ethers.JsonRpcProvider(network.rpcUrl);
+        const provider = new ethers.JsonRpcProvider(
+          network.rpcUrl,
+          network.chainId,
+          providerOptions
+        );
         
         // Create read-only contract instance
-        const contract = new ethers.Contract(
+        const readContract = new ethers.Contract(
           network.contractAddress,
           contractABI,
           provider
         );
+
+        let handleRegistry = null;
+        if (network.handleRegistryAddress && network.handleRegistryAddress !== ZERO_ADDRESS) {
+          handleRegistry = new ethers.Contract(
+            network.handleRegistryAddress,
+            handleRegistryABI,
+            provider
+          );
+        } else {
+          console.debug(`[multichain] No handle registry configured for ${network.name} (${network.chainId})`);
+        }
 
         // Test if the network is accessible
         try {
           await provider.getBlockNumber();
           chains[network.chainId] = {
             provider,
-            contract,
+            readProvider: provider,
+            contract: readContract,
+            readContract,
+            writeContract: null,
+            signer: null,
+            handleRegistry,
+            handleRegistrySigner: null,
             networkConfig: network,
             isAvailable: true
           };
@@ -131,7 +166,13 @@ function createMultiChainStore() {
           console.warn(`⚠ ${network.name} provider not accessible:`, err.message);
           chains[network.chainId] = {
             provider: null,
+            readProvider: null,
             contract: null,
+            readContract: null,
+            writeContract: null,
+            signer: null,
+            handleRegistry: null,
+            handleRegistrySigner: null,
             networkConfig: network,
             isAvailable: false
           };
@@ -140,7 +181,13 @@ function createMultiChainStore() {
         console.error(`Failed to initialize ${network.name}:`, error);
         chains[network.chainId] = {
           provider: null,
+          readProvider: null,
           contract: null,
+          readContract: null,
+          writeContract: null,
+          signer: null,
+          handleRegistry: null,
+          handleRegistrySigner: null,
           networkConfig: network,
           isAvailable: false
         };
@@ -186,6 +233,59 @@ function createMultiChainStore() {
         .map(key => value[key]);
     }
     return [];
+  }
+
+  function normalizeHandleBytes(value) {
+    if (!value) {
+      throw new Error('Handle bytes required');
+    }
+    return ethers.hexlify(value);
+  }
+
+  function getReadableHandleRegistry(chainData) {
+    if (!chainData || !chainData.handleRegistry) {
+      return null;
+    }
+    return chainData.handleRegistry;
+  }
+
+  function getWritableHandleRegistry(chainData, signer) {
+    if (!chainData) {
+      return null;
+    }
+    if (chainData.handleRegistrySigner) {
+      return chainData.handleRegistrySigner;
+    }
+    if (!signer || !chainData.networkConfig?.handleRegistryAddress) {
+      return null;
+    }
+    if (!chainData.handleRegistry && signer.provider) {
+      chainData.handleRegistry = new ethers.Contract(
+        chainData.networkConfig.handleRegistryAddress,
+        handleRegistryABI,
+        signer.provider
+      );
+    }
+    const writable = new ethers.Contract(
+      chainData.networkConfig.handleRegistryAddress,
+      handleRegistryABI,
+      signer
+    );
+    chainData.handleRegistrySigner = writable;
+    return writable;
+  }
+
+  function getWritableContractForChain(chainData, signer) {
+    if (!chainData) return null;
+    if (chainData.writeContract) {
+      return chainData.writeContract;
+    }
+    if (!chainData.contract || !signer) {
+      return null;
+    }
+    const writable = chainData.contract.connect(signer);
+    chainData.writeContract = writable;
+    return writable;
   }
 
   async function fetchPendingFriendRequests(address, chainId, chainsSnapshot) {
@@ -281,19 +381,45 @@ function createMultiChainStore() {
         console.log('Initializing multi-chain providers...');
         const chains = await initializeChains();
         
-        // Update the primary chain with signer
+        // Update the primary chain with signer-aware contracts
         if (chains[chainId]) {
-          const networkConfig = getNetworkByChainId(chainId);
-          const contractAddress = networkConfig?.contractAddress;
-          
+          const networkConfig = getNetworkByChainId(chainId) || {};
+          const contractAddress = networkConfig.contractAddress;
+          const handleRegistryAddress = networkConfig.handleRegistryAddress;
+          const updatedChain = {
+            ...chains[chainId],
+            signer,
+            providerWithSigner: browserProvider
+          };
+
           if (contractAddress && contractAddress !== ZERO_ADDRESS) {
-            chains[chainId].contract = new ethers.Contract(
+            updatedChain.writeContract = new ethers.Contract(
               contractAddress,
               contractABI,
               signer
             );
-            chains[chainId].signer = signer;
           }
+
+          if (handleRegistryAddress && handleRegistryAddress !== ZERO_ADDRESS) {
+            if (!updatedChain.handleRegistry) {
+              const readProvider = updatedChain.provider || updatedChain.readProvider || browserProvider;
+              if (readProvider) {
+                updatedChain.handleRegistry = new ethers.Contract(
+                  handleRegistryAddress,
+                  handleRegistryABI,
+                  readProvider
+                );
+              }
+            }
+
+            updatedChain.handleRegistrySigner = new ethers.Contract(
+              handleRegistryAddress,
+              handleRegistryABI,
+              signer
+            );
+          }
+
+          chains[chainId] = updatedChain;
         }
 
         update(store => ({
@@ -458,6 +584,117 @@ function createMultiChainStore() {
     },
 
     /**
+     * Check whether a handle registry exists on a chain
+     */
+    hasHandleRegistry: (chainId) => {
+      const currentStore = get(baseStore);
+      return Boolean(currentStore.chains?.[chainId]?.handleRegistry);
+    },
+
+    /**
+     * Fetch handle registry configuration (vocab length, max length, hash)
+     */
+    getHandleRegistryInfo: async (chainId) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+      const targetChainId = chainId ?? currentStore.primaryChainId;
+
+      if (!targetChainId) {
+        return { success: false, error: 'No chain specified' };
+      }
+
+      const chainData = currentStore.chains[targetChainId];
+      const registry = getReadableHandleRegistry(chainData);
+      if (!registry) {
+        console.debug('[multichain] Handle registry unavailable on chain', targetChainId);
+        return { success: false, error: 'Handle registry unavailable' };
+      }
+
+      if (chainData.handleRegistryInfo) {
+        return { success: true, info: chainData.handleRegistryInfo };
+      }
+
+      try {
+        const [vocabLength, maxLength, vocabHash] = await Promise.all([
+          registry.vocabLength(),
+          registry.maxLength(),
+          registry.vocabHash()
+        ]);
+
+        const info = {
+          vocabLength: Number(vocabLength),
+          maxLength: Number(maxLength),
+          vocabHash
+        };
+        chainData.handleRegistryInfo = info;
+        return { success: true, info };
+      } catch (error) {
+        console.error('Error loading handle registry info:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    /**
+     * Read the handle assigned to an address on a chain
+     */
+    getHandleForAddress: async (chainId, address) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+      const targetChainId = chainId ?? currentStore.primaryChainId;
+      const targetAddress = address || currentStore.primaryAddress;
+
+      if (!targetChainId || !targetAddress) {
+        return { success: false, error: 'Missing chain or address' };
+      }
+
+      const chainData = currentStore.chains[targetChainId];
+      const registry = getReadableHandleRegistry(chainData);
+      if (!registry) {
+        return { success: false, error: 'Handle registry unavailable' };
+      }
+
+      try {
+        const handle = await registry.handleOf(targetAddress);
+        if (!handle || handle === '0x' || handle.length <= 2) {
+          return { success: true, handle: null };
+        }
+        return { success: true, handle };
+      } catch (error) {
+        console.error('Error loading handle for address:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    /**
+     * Determine if a handle is already claimed on a chain
+     */
+    isHandleTakenOnChain: async (chainId, encodedHandle) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+      const targetChainId = chainId ?? currentStore.primaryChainId;
+
+      if (!targetChainId || !encodedHandle) {
+        return { success: false, error: 'Missing chain or handle' };
+      }
+
+      const chainData = currentStore.chains[targetChainId];
+      const registry = getReadableHandleRegistry(chainData);
+      if (!registry) {
+        return { success: false, error: 'Handle registry unavailable' };
+      }
+
+      try {
+        const owner = await registry.ownerOf(normalizeHandleBytes(encodedHandle));
+        const normalizedOwner = owner?.toLowerCase?.() ?? owner;
+        const isTaken = normalizedOwner && normalizedOwner !== ZERO_ADDRESS;
+        return { success: true, isTaken, owner: normalizedOwner };
+      } catch (error) {
+        console.error('Error checking handle availability:', error);
+        return { success: false, error: error.message };
+      }
+    },
+
+    /**
      * Check if a claim exists on a specific chain
      */
     checkClaimOnChain: async (chainId, address) => {
@@ -601,6 +838,71 @@ function createMultiChainStore() {
     },
 
     /**
+     * Claim a handle on the primary chain's registry
+     */
+    claimHandleOnPrimaryChain: async (encodedHandle) => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+      if (!encodedHandle) {
+        throw new Error('Missing handle payload');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      if (!chainId) {
+        throw new Error('No active chain');
+      }
+
+      const chainData = currentStore.chains[chainId];
+      const registry = getWritableHandleRegistry(chainData, currentStore.primarySigner);
+      if (!registry) {
+        throw new Error('Handle registry not available on current chain');
+      }
+
+      const tx = await registry.claim(normalizeHandleBytes(encodedHandle));
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash
+      };
+    },
+
+    /**
+     * Release the caller's handle on the primary chain
+     */
+    releaseHandleOnPrimaryChain: async () => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      if (!currentStore.connected) {
+        throw new Error('Wallet not connected');
+      }
+
+      const chainId = currentStore.primaryChainId;
+      if (!chainId) {
+        throw new Error('No active chain');
+      }
+
+      const chainData = currentStore.chains[chainId];
+      const registry = getWritableHandleRegistry(chainData, currentStore.primarySigner);
+      if (!registry) {
+        throw new Error('Handle registry not available on current chain');
+      }
+
+      const tx = await registry.release();
+      const receipt = await tx.wait();
+
+      return {
+        success: true,
+        transactionHash: receipt.hash
+      };
+    },
+
+    /**
      * Claim the connected address on the current primary chain
      */
     claimAddressOnPrimaryChain: async ({
@@ -637,7 +939,7 @@ function createMultiChainStore() {
       }
 
       const chainData = currentStore.chains[chainId];
-      if (!chainData || !chainData.contract) {
+      if (!chainData || (!chainData.contract && !chainData.writeContract)) {
         throw new Error('Contract not available on current chain');
       }
 
@@ -646,7 +948,10 @@ function createMultiChainStore() {
         throw new Error('No primary address');
       }
 
-      const contract = chainData.contract.connect(signer);
+      const contract = getWritableContractForChain(chainData, signer);
+      if (!contract) {
+        throw new Error('Unable to create signer contract');
+      }
       const publicKeyBytes = publicKey && publicKey.length ? publicKey : new Uint8Array();
 
       const tx = await contract.claimAddress(
@@ -701,7 +1006,7 @@ function createMultiChainStore() {
       }
 
       const chainData = currentStore.chains[chainId];
-      if (!chainData?.contract) {
+      if (!chainData || (!chainData.contract && !chainData.writeContract)) {
         throw new Error('Contract not available on current chain');
       }
 
@@ -709,7 +1014,12 @@ function createMultiChainStore() {
         ? (typeof publicKey === 'string' ? ethers.getBytes(publicKey) : publicKey)
         : new Uint8Array();
 
-      const tx = await chainData.contract.updateMetadata(
+      const contract = getWritableContractForChain(chainData, currentStore.primarySigner);
+      if (!contract) {
+        throw new Error('Unable to create signer contract');
+      }
+
+      const tx = await contract.updateMetadata(
         name,
         avatar,
         bio,
@@ -743,11 +1053,16 @@ function createMultiChainStore() {
 
       const chainId = currentStore.primaryChainId;
       const chainData = chainId ? currentStore.chains[chainId] : null;
-      if (!chainData?.contract) {
+      if (!chainData || (!chainData.contract && !chainData.writeContract)) {
         throw new Error('Contract not available on current chain');
       }
 
-      const tx = await chainData.contract.addViewer(viewerAddress);
+      const contract = getWritableContractForChain(chainData, currentStore.primarySigner);
+      if (!contract) {
+        throw new Error('Unable to create signer contract');
+      }
+
+      const tx = await contract.addViewer(viewerAddress);
       const receipt = await tx.wait();
       return { success: true, transactionHash: receipt.hash };
     },
@@ -765,11 +1080,16 @@ function createMultiChainStore() {
 
       const chainId = currentStore.primaryChainId;
       const chainData = chainId ? currentStore.chains[chainId] : null;
-      if (!chainData?.contract) {
+      if (!chainData || (!chainData.contract && !chainData.writeContract)) {
         throw new Error('Contract not available on current chain');
       }
 
-      const tx = await chainData.contract.removeViewer(viewerAddress);
+      const contract = getWritableContractForChain(chainData, currentStore.primarySigner);
+      if (!contract) {
+        throw new Error('Unable to create signer contract');
+      }
+
+      const tx = await contract.removeViewer(viewerAddress);
       const receipt = await tx.wait();
       return { success: true, transactionHash: receipt.hash };
     },
@@ -808,6 +1128,50 @@ function createMultiChainStore() {
       }
 
       return await currentStore.primarySigner.signMessage(message);
+    },
+
+    getExplorerStats: async () => {
+      await ensureChainsInitialized();
+      const currentStore = get(baseStore);
+
+      const stats = await Promise.all(
+        Object.entries(currentStore.chains).map(async ([chainId, chainData]) => {
+          if (!chainData?.contract || !chainData.isAvailable) {
+            return null;
+          }
+
+          let claimedCount = null;
+          try {
+            if (typeof chainData.contract.getClaimedAddressesCount === 'function') {
+              claimedCount = await chainData.contract.getClaimedAddressesCount();
+            } else if (typeof chainData.contract.getTotalClaims === 'function') {
+              claimedCount = await chainData.contract.getTotalClaims();
+            }
+          } catch (error) {
+            console.warn(`[multichain] Failed to fetch claimed count for ${chainData.networkConfig?.name}:`, error);
+          }
+
+          const claimedNumber = claimedCount != null
+            ? Number((typeof claimedCount === 'bigint') ? Number(claimedCount) : claimedCount)
+            : 0;
+
+          const handleRegistryAddress = chainData.networkConfig?.handleRegistryAddress;
+          const handleRegistryAvailable = Boolean(handleRegistryAddress && handleRegistryAddress !== ZERO_ADDRESS);
+
+          return {
+            chainId: Number(chainId),
+            name: chainData.networkConfig?.name || `Chain ${chainId}`,
+            shortName: chainData.networkConfig?.shortName || '',
+            claimedCount: claimedNumber,
+            contractAddress: chainData.networkConfig?.contractAddress,
+            handleRegistryAddress,
+            handleRegistryAvailable,
+            isAvailable: chainData.isAvailable
+          };
+        })
+      );
+
+      return stats.filter(Boolean);
     }
   };
   

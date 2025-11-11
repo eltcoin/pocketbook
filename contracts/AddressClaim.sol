@@ -102,6 +102,11 @@ contract AddressClaim is ReentrancyGuard {
     
     // Mapping to track if address is claimed
     mapping(address => bool) public isClaimed;
+
+    // Active claim tracking
+    uint256 public totalActiveClaims;
+    address[] private activeClaimedAddresses;
+    mapping(address => uint256) private activeClaimIndex; // 1-based index
     
     // Mapping from DID string to address (for DID resolution)
     mapping(string => address) public didToAddress;
@@ -138,6 +143,35 @@ contract AddressClaim is ReentrancyGuard {
     event AttestationCreated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp);
     event AttestationRevoked(address indexed attester, address indexed subject, uint256 timestamp);
     event AttestationUpdated(address indexed attester, address indexed subject, uint8 trustLevel, uint256 timestamp);
+
+    function _addActiveClaimant(address _address) internal {
+        require(activeClaimIndex[_address] == 0, "Already tracked");
+        activeClaimedAddresses.push(_address);
+        activeClaimIndex[_address] = activeClaimedAddresses.length; // 1-based
+        totalActiveClaims += 1;
+    }
+
+    function _removeActiveClaimant(address _address) internal {
+        uint256 index = activeClaimIndex[_address];
+        if (index == 0) {
+            return;
+        }
+
+        uint256 arrayIndex = index - 1;
+        uint256 lastIndex = activeClaimedAddresses.length - 1;
+        if (arrayIndex != lastIndex) {
+            address lastAddress = activeClaimedAddresses[lastIndex];
+            activeClaimedAddresses[arrayIndex] = lastAddress;
+            activeClaimIndex[lastAddress] = index;
+        }
+
+        activeClaimedAddresses.pop();
+        activeClaimIndex[_address] = 0;
+
+        if (totalActiveClaims > 0) {
+            totalActiveClaims -= 1;
+        }
+    }
     
     /**
      * @dev Claim an address with signed metadata
@@ -184,7 +218,7 @@ contract AddressClaim is ReentrancyGuard {
         newClaim.signature = _signature;
         newClaim.claimTime = block.timestamp;
         newClaim.isActive = true;
-        
+
         // Initialize metadata
         newClaim.metadata.name = _name;
         newClaim.metadata.avatar = _avatar;
@@ -204,7 +238,8 @@ contract AddressClaim is ReentrancyGuard {
         
         isClaimed[_address] = true;
         didToAddress[did] = _address;
-        
+        _addActiveClaimant(_address);
+
         emit AddressClaimed(_address, msg.sender, block.timestamp);
         emit DIDCreated(_address, did, block.timestamp);
         
@@ -346,10 +381,11 @@ contract AddressClaim is ReentrancyGuard {
         // [M-01] Delete DID mapping to prevent stale DID resolution
         string memory did = claims[msg.sender].didDocument.did;
         delete didToAddress[did];
-        
+
         claims[msg.sender].isActive = false;
         isClaimed[msg.sender] = false;
-        
+        _removeActiveClaimant(msg.sender);
+
         emit ClaimRevoked(msg.sender, block.timestamp);
     }
     
@@ -369,7 +405,7 @@ contract AddressClaim is ReentrancyGuard {
         bool isPrivate
     ) {
         require(isClaimed[_address], "Address not claimed");
-        
+
         Claim memory claim = claims[_address];
         
         // Check if caller can view private metadata
@@ -393,6 +429,39 @@ contract AddressClaim is ReentrancyGuard {
             claim.isActive,
             claim.metadata.isPrivate
         );
+    }
+
+    function getTotalClaims() public view returns (uint256) {
+        return totalActiveClaims;
+    }
+
+    function getClaimedAddressesCount() public view returns (uint256) {
+        return activeClaimedAddresses.length;
+    }
+
+    function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory addresses, uint256 total) {
+        uint256 totalAddresses = activeClaimedAddresses.length;
+        total = totalAddresses;
+
+        if (limit == 0 || offset >= totalAddresses) {
+            return (new address[](0), totalAddresses);
+        }
+
+        uint256 end = offset + limit;
+        if (end > totalAddresses) {
+            end = totalAddresses;
+        }
+
+        uint256 sliceLength = end - offset;
+        addresses = new address[](sliceLength);
+        for (uint256 i = 0; i < sliceLength; i++) {
+            addresses[i] = activeClaimedAddresses[offset + i];
+        }
+    }
+
+    function getClaimedAddresses(uint256 offset, uint256 limit) external view returns (address[] memory) {
+        (address[] memory addresses, ) = getClaimedAddressesPaginated(offset, limit);
+        return addresses;
     }
     
     /**

@@ -16,6 +16,7 @@ Pocketbook is a revolutionary decentralized identity platform built on Ethereum 
 ### Key Features
 
 - 🎯 **Address Claiming**: Claim any Ethereum address you own and attach verifiable metadata
+- 🧩 **Word Handles**: Deterministically mint BIP39 phrases that map directly to your address
 - 🔐 **Cryptographic Verification**: All claims are secured by cryptographic signatures proving ownership
 - 🌐 **Decentralized Network**: Build your web of trust without central authorities
 - 🔒 **Privacy Control**: Choose what's public and what's private with whitelist-based access
@@ -355,7 +356,21 @@ VITE_CONTRACT_ADDRESS_AVALANCHE=0xYourContractAddressHere
 # Testnets
 VITE_CONTRACT_ADDRESS_SEPOLIA=0xYourContractAddressHere
 VITE_CONTRACT_ADDRESS_MUMBAI=0xYourContractAddressHere
+
+# Optional Word Handle Registries
+VITE_HANDLE_REGISTRY_ADDRESS_ETHEREUM=0xYourRegistryAddressHere
+VITE_HANDLE_REGISTRY_ADDRESS_POLYGON=0xYourRegistryAddressHere
+VITE_HANDLE_REGISTRY_ADDRESS_SEPOLIA=0xYourRegistryAddressHere
 ```
+
+To enable word handles on a network, deploy `AddressHandleRegistry.sol` with the desired vocabulary parameters and set the corresponding `VITE_HANDLE_REGISTRY_ADDRESS_*` value. The UI automatically detects the registry, loads the BIP39 English word list, and exposes handle suggestion/claiming flows.
+
+### Word Handle Registry
+
+- `AddressHandleRegistry.sol` validates deterministic handle encodings and guarantees uniqueness per wallet.
+- Handles are encoded as `[length:uint8] + length * uint16` indices pointing into the shared vocabulary (BIP39 by default).
+- The front-end loads the vocabulary from `public/wordlists/bip39-english.txt`, suggests phrases via a deterministic SHA-256 PRNG, and calls `multiChainStore.claimHandleOnPrimaryChain()` / `releaseHandleOnPrimaryChain()` for mutations.
+- Read helpers (`getHandleForAddress`, `isHandleTakenOnChain`) feed the explorer grid and the address detail view so every handle stays in sync across the multi-chain experience.
 
 ### Architecture
 

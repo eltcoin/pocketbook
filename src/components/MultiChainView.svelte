@@ -1,7 +1,9 @@
 <script>
   import { onMount } from 'svelte';
+  import { ethers } from 'ethers';
   import { multiChainStore, availableChains } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
+  import { loadWordlist, decodeHandle, formatHandle } from '../utils/wordhandles';
   import Icon from './Icon.svelte';
 
   export let address;
@@ -9,16 +11,14 @@
   let darkMode = false;
   let loading = true;
   let chainClaims = [];
-  let connected = false;
   let availableChainsList = [];
   let lastLoadedAddress = null;
+  let wordlist = [];
+  let wordlistPromise = null;
+  let fetchingHandles = false;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
-  });
-
-  multiChainStore.subscribe(value => {
-    connected = value.connected;
   });
 
   availableChains.subscribe(value => {
@@ -26,17 +26,21 @@
   });
 
   onMount(async () => {
-    if (connected && address) {
+    if (address) {
       await loadClaimsAcrossChains();
     }
   });
 
   async function loadClaimsAcrossChains() {
+    if (!address) {
+      chainClaims = [];
+      return;
+    }
     loading = true;
     lastLoadedAddress = address;
     try {
       const claims = await multiChainStore.getClaimsAcrossChains(address);
-      chainClaims = claims;
+      chainClaims = await attachHandleData(claims);
     } catch (error) {
       console.error('Error loading multi-chain claims:', error);
     } finally {
@@ -44,8 +48,66 @@
     }
   }
 
-  // Only reload if connected, address exists, and it's different from the last loaded address
-  $: if (connected && address && address !== lastLoadedAddress) {
+  async function ensureWordlist() {
+    if (wordlist.length) {
+      return wordlist;
+    }
+    if (wordlistPromise) {
+      return wordlistPromise;
+    }
+    wordlistPromise = loadWordlist()
+      .then(list => {
+        wordlist = list;
+        return list;
+      })
+      .finally(() => {
+        wordlistPromise = null;
+      });
+    return wordlistPromise;
+  }
+
+  async function attachHandleData(claims) {
+    if (!claims || claims.length === 0) {
+      return claims || [];
+    }
+
+    fetchingHandles = true;
+    try {
+      const vocab = await ensureWordlist().catch(() => []);
+      const enriched = await Promise.all(
+        claims.map(async (claimEntry) => {
+          if (!claimEntry?.chainId) {
+            return claimEntry;
+          }
+          try {
+            const handleResult = await multiChainStore.getHandleForAddress(claimEntry.chainId, address);
+            if (!handleResult?.success || !handleResult.handle) {
+              return claimEntry;
+            }
+            const indices = decodeHandle(handleResult.handle);
+            const withinBounds = vocab.length > 0 && indices.every(idx => idx < vocab.length);
+            return {
+              ...claimEntry,
+              handle: {
+                phrase: withinBounds ? formatHandle(indices, vocab) : ethers.hexlify(handleResult.handle),
+                hex: ethers.hexlify(handleResult.handle),
+                indices
+              }
+            };
+          } catch (error) {
+            console.debug('Handle lookup failed for chain', claimEntry.chainId, error);
+            return claimEntry;
+          }
+        })
+      );
+      return enriched;
+    } finally {
+      fetchingHandles = false;
+    }
+  }
+
+  // Reload whenever the viewed address changes
+  $: if (address && address !== lastLoadedAddress) {
     loadClaimsAcrossChains();
   }
 </script>
@@ -97,6 +159,15 @@
               <span class="label">Claimed:</span>
               <span class="value">{new Date(Number(chainClaim.claim.claimTime) * 1000).toLocaleDateString()}</span>
             </div>
+            {#if chainClaim.handle}
+              <div class="detail-row handle-row">
+                <span class="label">Handle:</span>
+                <span class="value handle-value">
+                  {chainClaim.handle.phrase}
+                  <code>{chainClaim.handle.hex}</code>
+                </span>
+              </div>
+            {/if}
           </div>
         </div>
       {/each}
@@ -281,6 +352,32 @@
 
   .multichain-view.dark .detail-row .value {
     color: #f1f5f9;
+  }
+
+  .handle-value {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-weight: 600;
+    color: #0f766e;
+  }
+
+  .multichain-view.dark .handle-value {
+    color: #5eead4;
+  }
+
+  .handle-value code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.8rem;
+    background: rgba(15, 23, 42, 0.08);
+    padding: 0.15rem 0.4rem;
+    border-radius: 6px;
+    color: #0f172a;
+  }
+
+  .multichain-view.dark .handle-value code {
+    background: rgba(15, 23, 42, 0.5);
+    color: #f8fafc;
   }
 
   .detail-row .value.avatar {
