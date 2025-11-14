@@ -1,16 +1,14 @@
 <script>
-  import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
-  import { getContractInteractions, formatTimestamp, formatAddress, getExplorerUrl } from '../utils/blockchainExplorer.js';
+  import { getContractInteractions, formatTimestamp, formatAddress, getExplorerUrl, getTimeAgo } from '../utils/blockchainExplorer.js';
 
-  export let provider;
-  export let address;
-  export let chainId;
+  let { provider, address, chainId } = $props();
 
   let interactions = $state([]);
   let loading = $state(true);
   let error = $state(null);
   let blockRange = $state(5000);
+  let modalData = $state(null);
 
   async function loadContractInteractions() {
     if (!provider || !address || !chainId) {
@@ -46,9 +44,13 @@
     return 'default';
   }
 
-  onMount(() => {
-    loadContractInteractions();
-  });
+  function showDataModal(data, selector) {
+    modalData = { data, selector };
+  }
+
+  function closeModal() {
+    modalData = null;
+  }
 
   // Reload when inputs change
   $effect(() => {
@@ -151,9 +153,7 @@
                   <button
                     class="view-data-btn"
                     title="View raw data"
-                    onclick={() => {
-                      alert(`Raw Data:\n${interaction.data}\n\nSelector: ${interaction.decodedFunction.selector}`);
-                    }}
+                    onclick={() => showDataModal(interaction.data, interaction.decodedFunction.selector)}
                   >
                     <Icon name="info" size="14" />
                   </button>
@@ -179,6 +179,29 @@
     </div>
   {/if}
 </div>
+
+{#if modalData}
+  <div class="modal-overlay" onclick={closeModal}>
+    <div class="modal-content" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <h4>Contract Call Data</h4>
+        <button class="modal-close" onclick={closeModal} aria-label="Close modal">
+          ×
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="data-section">
+          <label>Function Selector:</label>
+          <code class="data-value">{modalData.selector}</code>
+        </div>
+        <div class="data-section">
+          <label>Raw Data:</label>
+          <textarea readonly class="data-value" rows="8">{modalData.data}</textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .contract-interactions {
@@ -432,18 +455,105 @@
       gap: 0.25rem;
     }
   }
-</style>
 
-<script context="module">
-  function getTimeAgo(timestamp) {
-    if (!timestamp) return 'Unknown';
-
-    const now = Math.floor(Date.now() / 1000);
-    const seconds = now - timestamp;
-
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
+  /* Modal styles */
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
   }
-</script>
+
+  .modal-content {
+    background: var(--card-bg, #1a1a1a);
+    border-radius: 12px;
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border-color, #333);
+  }
+
+  .modal-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--text-color, #ffffff);
+  }
+
+  .modal-close {
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #999);
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s;
+    font-size: 2rem;
+    line-height: 1;
+    width: 32px;
+    height: 32px;
+  }
+
+  .modal-close:hover {
+    background: var(--hover-bg, #2a2a2a);
+    color: var(--text-color, #ffffff);
+  }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  .data-section {
+    margin-bottom: 1.5rem;
+  }
+
+  .data-section:last-child {
+    margin-bottom: 0;
+  }
+
+  .data-section label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: var(--text-muted, #999);
+    font-size: 0.875rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .data-section .data-value {
+    display: block;
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--input-bg, #0a0a0a);
+    border: 1px solid var(--border-color, #333);
+    border-radius: 6px;
+    color: var(--text-color, #ffffff);
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    word-break: break-all;
+  }
+
+  .data-section textarea.data-value {
+    resize: vertical;
+    min-height: 120px;
+  }
+</style>
