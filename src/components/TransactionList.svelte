@@ -1,12 +1,9 @@
 <script>
-  import { onMount } from 'svelte';
   import Icon from './Icon.svelte';
-  import { getTransactions, formatTimestamp, formatAddress, getExplorerUrl } from '../utils/blockchainExplorer.js';
+  import { getTransactions, formatTimestamp, formatAddress, getExplorerUrl, getTimeAgo } from '../utils/blockchainExplorer.js';
   import { ethers } from 'ethers';
 
-  export let provider;
-  export let address;
-  export let chainId;
+  let { provider, address, chainId } = $props();
 
   let transactions = $state([]);
   let loading = $state(true);
@@ -38,10 +35,6 @@
   function refresh() {
     loadTransactions();
   }
-
-  onMount(() => {
-    loadTransactions();
-  });
 
   // Reload when inputs change
   $effect(() => {
@@ -406,17 +399,3 @@
     }
   }
 </style>
-
-<script context="module">
-  function getTimeAgo(timestamp) {
-    if (!timestamp) return 'Unknown';
-
-    const now = Math.floor(Date.now() / 1000);
-    const seconds = now - timestamp;
-
-    if (seconds < 60) return `${seconds}s ago`;
-    if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
-    if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
-    return `${Math.floor(seconds / 86400)}d ago`;
-  }
-</script>

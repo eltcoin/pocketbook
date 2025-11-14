@@ -4,9 +4,7 @@
   import ContractInteractions from './ContractInteractions.svelte';
   import Icon from './Icon.svelte';
 
-  export let provider;
-  export let address;
-  export let chainId;
+  let { provider, address, chainId } = $props();
 
   let activeTab = $state('transactions');
 

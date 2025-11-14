@@ -206,7 +206,13 @@ export async function getTokenTransfers(provider, address, chainId, options = {}
           const tokenMetadata = await getTokenMetadata(provider, log.address);
 
           // Get block timestamp
-          const block = await provider.getBlock(log.blockNumber).catch(() => null);
+          const block = await provider.getBlock(log.blockNumber).catch((err) => {
+            console.error(
+              `Failed to fetch block ${log.blockNumber} for tx ${log.transactionHash}:`,
+              err
+            );
+            return null;
+          });
 
           return {
             transactionHash: log.transactionHash,
@@ -248,7 +254,7 @@ export async function getTokenTransfers(provider, address, chainId, options = {}
 export async function getTransactions(provider, address, chainId, options = {}) {
   const {
     limit = 50,
-    blockRange = 5000 // Scan last 5000 blocks
+    blockRange = 5000 // Default: scan 5000 most recent blocks
   } = options;
 
   const cacheKey = `txns_${chainId}_${address}_${blockRange}`;
@@ -263,70 +269,80 @@ export async function getTransactions(provider, address, chainId, options = {}) 
     const currentBlock = await provider.getBlockNumber();
     const startBlock = Math.max(0, currentBlock - blockRange);
 
-    const transactions = [];
-
     // Scan blocks in batches (more efficient)
     const batchSize = 100;
-    const promises = [];
-
-    for (let block = currentBlock; block >= startBlock && transactions.length < limit; block -= batchSize) {
+    const allTransactions = [];
+    
+    // Create batch promises array
+    const batchPromises = [];
+    
+    for (let block = currentBlock; block >= startBlock; block -= batchSize) {
       const fromBlock = Math.max(startBlock, block - batchSize + 1);
       const toBlock = block;
 
-      promises.push(
-        (async () => {
-          try {
-            // Get blocks with transaction details
-            for (let i = toBlock; i >= fromBlock && transactions.length < limit; i--) {
-              const blockData = await provider.getBlock(i, true);
-              if (!blockData || !blockData.transactions) continue;
+      const batchPromise = (async () => {
+        const batchResults = [];
+        try {
+          // Get blocks with transaction details
+          for (let i = toBlock; i >= fromBlock; i--) {
+            const blockData = await provider.getBlock(i, true);
+            if (!blockData || !blockData.transactions) continue;
 
-              // Filter transactions involving our address
-              for (const tx of blockData.transactions) {
-                if (transactions.length >= limit) break;
-
-                if (
-                  tx.from?.toLowerCase() === address.toLowerCase() ||
-                  tx.to?.toLowerCase() === address.toLowerCase()
-                ) {
-                  transactions.push({
-                    hash: tx.hash,
-                    blockNumber: blockData.number,
-                    timestamp: blockData.timestamp,
-                    from: tx.from,
-                    to: tx.to,
-                    value: tx.value.toString(),
-                    valueFormatted: ethers.formatEther(tx.value),
-                    gasPrice: tx.gasPrice?.toString(),
-                    gasLimit: tx.gasLimit?.toString(),
-                    nonce: tx.nonce,
-                    data: tx.data,
-                    type: tx.from?.toLowerCase() === address.toLowerCase() ? 'sent' : 'received',
-                    isContractInteraction: tx.data && tx.data !== '0x' && tx.data.length > 2
-                  });
-                }
+            // Filter transactions involving our address
+            for (const tx of blockData.transactions) {
+              if (
+                tx.from?.toLowerCase() === address.toLowerCase() ||
+                tx.to?.toLowerCase() === address.toLowerCase()
+              ) {
+                batchResults.push({
+                  hash: tx.hash,
+                  blockNumber: blockData.number,
+                  timestamp: blockData.timestamp,
+                  from: tx.from,
+                  to: tx.to,
+                  value: tx.value.toString(),
+                  valueFormatted: ethers.formatEther(tx.value),
+                  gasPrice: tx.gasPrice?.toString(),
+                  gasLimit: tx.gasLimit?.toString(),
+                  nonce: tx.nonce,
+                  data: tx.data,
+                  type: tx.from?.toLowerCase() === address.toLowerCase() ? 'sent' : 'received',
+                  isContractInteraction: tx.data && tx.data !== '0x' && tx.data.length > 2
+                });
               }
             }
-          } catch (err) {
-            console.warn(`Error scanning block range ${fromBlock}-${toBlock}:`, err);
           }
-        })()
-      );
+        } catch (err) {
+          console.warn(`Error scanning block range ${fromBlock}-${toBlock}:`, err);
+        }
+        return batchResults;
+      })();
+
+      batchPromises.push(batchPromise);
 
       // Process in batches of 5 to avoid rate limits
-      if (promises.length >= 5) {
-        await Promise.all(promises);
-        promises.length = 0;
+      if (batchPromises.length >= 5) {
+        const results = await Promise.all(batchPromises);
+        results.forEach(batchResults => allTransactions.push(...batchResults));
+        batchPromises.length = 0;
+        
+        // Early exit if we have enough transactions
+        if (allTransactions.length >= limit) {
+          break;
+        }
       }
     }
 
     // Wait for remaining promises
-    if (promises.length > 0) {
-      await Promise.all(promises);
+    if (batchPromises.length > 0) {
+      const results = await Promise.all(batchPromises);
+      results.forEach(batchResults => allTransactions.push(...batchResults));
     }
 
-    // Sort by block number descending
-    transactions.sort((a, b) => b.blockNumber - a.blockNumber);
+    // Sort by block number descending and limit results
+    const transactions = allTransactions
+      .sort((a, b) => b.blockNumber - a.blockNumber)
+      .slice(0, limit);
 
     // Cache results
     cache.set(cacheKey, transactions, CACHE_DURATION_RECENT);
@@ -544,6 +560,21 @@ export function getExplorerUrl(chainId, txHash, type = 'tx') {
 
   const baseUrl = explorers[chainId] || 'https://etherscan.io';
   return `${baseUrl}/${type}/${txHash}`;
+}
+
+/**
+ * Format timestamp as relative time ago (e.g., "5m ago", "2h ago")
+ */
+export function getTimeAgo(timestamp) {
+  if (!timestamp) return 'Unknown';
+
+  const now = Math.floor(Date.now() / 1000);
+  const seconds = now - timestamp;
+
+  if (seconds < 60) return `${seconds}s ago`;
+  if (seconds < 3600) return `${Math.floor(seconds / 60)}m ago`;
+  if (seconds < 86400) return `${Math.floor(seconds / 3600)}h ago`;
+  return `${Math.floor(seconds / 86400)}d ago`;
 }
 
 export default {
