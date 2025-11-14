@@ -7,6 +7,7 @@
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
   import Reputation from './Reputation.svelte';
+  import BlockchainExplorer from './BlockchainExplorer.svelte';
   import Icon from './Icon.svelte';
 
   export let address;
@@ -33,6 +34,7 @@
   let loadingTransactions = false;
   let balance = '0';
   let loadingBalance = false;
+  let chainId = 1; // Default to Ethereum mainnet
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -40,6 +42,7 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
+    chainId = value.primaryChainId || 1;
     // Get provider from the primary chain
     provider = value.chains?.[value.primaryChainId]?.provider || null;
     contract = value.chains?.[value.primaryChainId]?.contract || null;
@@ -460,6 +463,8 @@
 
       <MultiChainView {address} />
 
+      <BlockchainExplorer {provider} {address} {chainId} />
+
       <div class="verification-box">
         <h3>
           <Icon name="shield-alt" size="1.5rem" />
@@ -616,6 +621,8 @@
       </div>
 
       <MultiChainView {address} />
+
+      <BlockchainExplorer {provider} {address} {chainId} />
 
       <div class="what-is-claiming">
         <h3>What is Address Claiming?</h3>
