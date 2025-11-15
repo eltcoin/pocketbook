@@ -1,5 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { get } from 'svelte/store';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { lookupENSName } from '../utils/ens';
@@ -34,7 +35,8 @@
   let loadingTransactions = false;
   let balance = '0';
   let loadingBalance = false;
-  let chainId = 1; // Default to Ethereum mainnet
+  // Initialize chainId from store's current value
+  let chainId = get(multiChainStore).primaryChainId || 1;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;

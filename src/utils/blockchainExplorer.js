@@ -22,6 +22,9 @@ const ERC20_ABI = [
 const CACHE_DURATION_RECENT = 5 * 60 * 1000; // 5 minutes
 const CACHE_DURATION_OLD = 60 * 60 * 1000; // 1 hour
 
+// Block range limits for performance
+const MAX_BLOCK_RANGE_TOKEN_TRANSFERS = 10000;
+
 /**
  * Cache manager using localStorage
  */
@@ -148,8 +151,8 @@ export async function getTokenTransfers(provider, address, chainId, options = {}
     // Get current block for relative calculations
     const currentBlock = await provider.getBlockNumber();
 
-    // Calculate block range (limit to last 10000 blocks for performance)
-    let startBlock = fromBlock === 'earliest' ? Math.max(0, currentBlock - 10000) : fromBlock;
+    // Calculate block range (limit to last MAX_BLOCK_RANGE_TOKEN_TRANSFERS blocks for performance)
+    let startBlock = fromBlock === 'earliest' ? Math.max(0, currentBlock - MAX_BLOCK_RANGE_TOKEN_TRANSFERS) : fromBlock;
     let endBlock = toBlock === 'latest' ? currentBlock : toBlock;
 
     // ERC-20 Transfer events where address is sender or receiver
@@ -205,14 +208,25 @@ export async function getTokenTransfers(provider, address, chainId, options = {}
           // Get token metadata
           const tokenMetadata = await getTokenMetadata(provider, log.address);
 
-          // Get block timestamp
-          const block = await provider.getBlock(log.blockNumber).catch((err) => {
-            console.error(
-              `Failed to fetch block ${log.blockNumber} for tx ${log.transactionHash}:`,
-              err
-            );
-            return null;
-          });
+          // Get block timestamp with retry logic
+          let block = null;
+          const maxAttempts = 3;
+          for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+              block = await provider.getBlock(log.blockNumber);
+              if (block) break;
+            } catch (err) {
+              if (attempt === maxAttempts - 1) {
+                console.error(
+                  `Failed to fetch block ${log.blockNumber} for tx ${log.transactionHash} after ${maxAttempts} attempts:`,
+                  err
+                );
+              } else {
+                // Wait before retrying
+                await new Promise(res => setTimeout(res, 500));
+              }
+            }
+          }
 
           return {
             transactionHash: log.transactionHash,
@@ -283,10 +297,39 @@ export async function getTransactions(provider, address, chainId, options = {}) 
       const batchPromise = (async () => {
         const batchResults = [];
         try {
-          // Get blocks with transaction details
+          // Fetch all blocks in the batch concurrently
+          const blockNumbers = [];
           for (let i = toBlock; i >= fromBlock; i--) {
-            const blockData = await provider.getBlock(i, true);
-            if (!blockData || !blockData.transactions) continue;
+            blockNumbers.push(i);
+          }
+          
+          // Fetch blocks with retry logic
+          const fetchBlockWithRetry = async (blockNum, attempts = 3) => {
+            for (let attempt = 0; attempt < attempts; attempt++) {
+              try {
+                const blockData = await provider.getBlock(blockNum, true);
+                if (blockData && blockData.transactions) {
+                  return blockData;
+                }
+              } catch (err) {
+                if (attempt === attempts - 1) {
+                  console.warn(`Failed to fetch block ${blockNum} after ${attempts} attempts. Transactions in this block will be skipped.`);
+                  return null;
+                }
+                // Wait before retrying
+                await new Promise(res => setTimeout(res, 500));
+              }
+            }
+            return null;
+          };
+          
+          const blockDataArray = await Promise.all(
+            blockNumbers.map(i => fetchBlockWithRetry(i))
+          );
+          
+          // Process all fetched blocks
+          for (const blockData of blockDataArray) {
+            if (!blockData) continue;
 
             // Filter transactions involving our address
             for (const tx of blockData.transactions) {
@@ -324,7 +367,7 @@ export async function getTransactions(provider, address, chainId, options = {}) 
       if (batchPromises.length >= 5) {
         const results = await Promise.all(batchPromises);
         results.forEach(batchResults => allTransactions.push(...batchResults));
-        batchPromises.length = 0;
+        batchPromises = [];
         
         // Early exit if we have enough transactions
         if (allTransactions.length >= limit) {
