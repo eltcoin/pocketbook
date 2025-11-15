@@ -162,7 +162,8 @@
               </td>
               <td class="value">
                 {#if parseFloat(tx.valueFormatted) > 0}
-                  <strong>{parseFloat(tx.valueFormatted).toFixed(6)}</strong>
+                  {@const valueNum = parseFloat(tx.valueFormatted)}
+                  <strong>{valueNum.toFixed(6)}</strong>
                 {:else}
                   0
                 {/if}

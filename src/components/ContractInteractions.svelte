@@ -186,7 +186,7 @@
       <div class="modal-header">
         <h4>Contract Call Data</h4>
         <button class="modal-close" onclick={closeModal} aria-label="Close modal">
-          ×
+          <span aria-hidden="true">×</span>
         </button>
       </div>
       <div class="modal-body">

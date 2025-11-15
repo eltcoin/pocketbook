@@ -2,6 +2,9 @@
   import Icon from './Icon.svelte';
   import { getTokenTransfers, formatTimestamp, formatAddress, getExplorerUrl, getTimeAgo } from '../utils/blockchainExplorer.js';
 
+  // Maximum block range for token transfer searches
+  const MAX_BLOCK_RANGE = 100000;
+
   let { provider, address, chainId } = $props();
 
   let transfers = $state([]);
@@ -81,7 +84,7 @@
     <div class="empty">
       <Icon name="inbox" size="48" />
       <p>No token transfers found in the last {blockRange.toLocaleString()} blocks</p>
-      <button onclick={() => { blockRange = Math.min(blockRange * 2, 100000); refresh(); }}>
+      <button onclick={() => { blockRange = Math.min(blockRange * 2, MAX_BLOCK_RANGE); refresh(); }}>
         Search More Blocks
       </button>
     </div>
