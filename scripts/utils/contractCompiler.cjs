@@ -1,47 +1,15 @@
-#!/usr/bin/env node
-
 const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const requireFromString = require('require-from-string');
 const solc = require('solc');
 
-const rootDir = path.resolve(__dirname, '..');
-const contractDir = path.join(rootDir, 'contracts');
-const contractFile = path.join(contractDir, 'AddressClaim.sol');
-
-if (!fs.existsSync(contractFile)) {
-  console.error('Contract file not found at', contractFile);
-  process.exit(1);
-}
-
-const source = fs.readFileSync(contractFile, 'utf8');
-
-const input = {
-  language: 'Solidity',
-  sources: {
-    'AddressClaim.sol': {
-      content: source
-    }
-  },
-  settings: {
-    viaIR: true,
-    optimizer: {
-      enabled: true,
-      runs: 200
-    },
-    outputSelection: {
-      '*': {
-        '*': ['abi', 'evm.bytecode']
-      }
-    }
-  }
-};
-
 const TARGET_SOLC_VERSION = '0.8.23';
 const FALLBACK_REMOTE_SOLC_VERSION = 'v0.8.23+commit.f704f362';
 const SOLC_RELEASES_URL = 'https://binaries.soliditylang.org/bin/list.json';
 const SOLC_BIN_BASE_URL = 'https://binaries.soliditylang.org/bin/';
+
+let compilerPromise = null;
 
 function fetchText(url) {
   return new Promise((resolve, reject) => {
@@ -186,12 +154,87 @@ async function loadCompiler() {
   }
 }
 
-async function main() {
-  const compiler = await loadCompiler();
+async function getCompiler() {
+  if (!compilerPromise) {
+    compilerPromise = loadCompiler();
+  }
+  return compilerPromise;
+}
+
+function resolveImportPath(importPath, baseDir, rootDir) {
+  const candidates = [
+    path.isAbsolute(importPath) ? importPath : path.join(baseDir, importPath),
+    path.join(rootDir, importPath),
+    path.join(rootDir, 'contracts', importPath)
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate) && fs.statSync(candidate).isFile()) {
+      return candidate;
+    }
+  }
+  return null;
+}
+
+async function compileContract({
+  contractFile,
+  contractName,
+  artifactFileName,
+  bytecodeEnvVar,
+  viaIR = true,
+  optimizerRuns = 200,
+  rootDir = path.resolve(__dirname, '..', '..')
+}) {
+  if (!contractFile || !contractName || !artifactFileName || !bytecodeEnvVar) {
+    throw new Error('compileContract requires contractFile, contractName, artifactFileName, and bytecodeEnvVar');
+  }
+
+  const absoluteContractPath = path.isAbsolute(contractFile)
+    ? contractFile
+    : path.join(rootDir, contractFile);
+
+  if (!fs.existsSync(absoluteContractPath)) {
+    throw new Error(`Contract file not found at ${absoluteContractPath}`);
+  }
+
+  const sourceLabel = path.basename(absoluteContractPath);
+  const sourceContent = fs.readFileSync(absoluteContractPath, 'utf8');
+
+  const input = {
+    language: 'Solidity',
+    sources: {
+      [sourceLabel]: {
+        content: sourceContent
+      }
+    },
+    settings: {
+      viaIR,
+      optimizer: {
+        enabled: true,
+        runs: optimizerRuns
+      },
+      outputSelection: {
+        '*': {
+          '*': ['abi', 'evm.bytecode']
+        }
+      }
+    }
+  };
+
+  const contractDir = path.dirname(absoluteContractPath);
+  const importResolver = (importPath) => {
+    const resolvedPath = resolveImportPath(importPath, contractDir, rootDir);
+    if (!resolvedPath) {
+      return { error: `File not found: ${importPath}` };
+    }
+    return { contents: fs.readFileSync(resolvedPath, 'utf8') };
+  };
+
+  const compiler = await getCompiler();
 
   let compiled;
   try {
-    compiled = JSON.parse(compiler.compile(JSON.stringify(input)));
+    compiled = JSON.parse(compiler.compile(JSON.stringify(input), { import: importResolver }));
   } catch (error) {
     throw new Error(`Compilation failed: ${error.message || error}`);
   }
@@ -206,25 +249,24 @@ async function main() {
       }
     });
 
-    // Ignore UnimplementedFeatureError with viaIR in solc 0.8.0 (it still compiles successfully)
-    const hasError = compiled.errors.some((err) => 
-      err.severity === 'error' && err.type !== 'UnimplementedFeatureError'
+    const hasError = compiled.errors.some(
+      (err) => err.severity === 'error' && err.type !== 'UnimplementedFeatureError'
     );
     if (hasError) {
       throw new Error('Compilation produced errors. See details above.');
     }
   }
 
-  const contractOutput = compiled.contracts?.['AddressClaim.sol']?.AddressClaim;
+  const contractOutput = compiled.contracts?.[sourceLabel]?.[contractName];
 
   if (!contractOutput) {
-    throw new Error('AddressClaim contract artifact not found in compilation output.');
+    throw new Error(`${contractName} artifact not found in compilation output.`);
   }
 
   const bytecode = contractOutput.evm?.bytecode?.object;
 
   if (!bytecode || bytecode.length === 0) {
-    throw new Error('Bytecode not generated for AddressClaim contract.');
+    throw new Error(`Bytecode not generated for ${contractName}.`);
   }
 
   const prefixedBytecode = bytecode.startsWith('0x') ? bytecode : `0x${bytecode}`;
@@ -234,9 +276,9 @@ async function main() {
     fs.mkdirSync(buildDir, { recursive: true });
   }
 
-  const artifactPath = path.join(buildDir, 'AddressClaim.json');
+  const artifactPath = path.join(buildDir, artifactFileName);
   const artifact = {
-    contractName: 'AddressClaim',
+    contractName,
     abi: contractOutput.abi || [],
     bytecode: prefixedBytecode
   };
@@ -255,26 +297,28 @@ async function main() {
   }
 
   const existingLines = envContent ? envContent.split(/\r?\n/) : [];
-  const filteredLines = existingLines.filter((line) => !line.startsWith('VITE_ADDRESS_CLAIM_BYTECODE='));
+  const filteredLines = existingLines.filter((line) => !line.startsWith(`${bytecodeEnvVar}=`));
 
   if (filteredLines.length > 0 && filteredLines[filteredLines.length - 1] !== '') {
     filteredLines.push('');
   }
 
-  filteredLines.push(`VITE_ADDRESS_CLAIM_BYTECODE=${prefixedBytecode}`);
+  filteredLines.push(`${bytecodeEnvVar}=${prefixedBytecode}`);
 
   const newEnvContent = `${filteredLines.join('\n').replace(/\n+$/, '')}\n`;
   fs.writeFileSync(envPath, newEnvContent, 'utf8');
 
-  console.log(`✓ Contract compiled: ${path.relative(rootDir, artifactPath)}`);
-  console.log(`✓ Updated ${path.relative(rootDir, envPath)} with VITE_ADDRESS_CLAIM_BYTECODE`);
+  console.log(`✓ ${contractName} compiled: ${path.relative(rootDir, artifactPath)}`);
+  console.log(`✓ Updated ${path.relative(rootDir, envPath)} with ${bytecodeEnvVar}`);
   console.log(`Bytecode length: ${prefixedBytecode.length} characters`);
+
+  return {
+    artifactPath,
+    envPath,
+    bytecodeLength: prefixedBytecode.length
+  };
 }
 
-main().catch((error) => {
-  console.error(error.message || error);
-  if (error.message && error.message.includes('Failed to load Solidity compiler')) {
-    console.error('Ensure you have network access or install solc@0.8.x locally.');
-  }
-  process.exit(1);
-});
+module.exports = {
+  compileContract
+};

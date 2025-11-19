@@ -13,6 +13,10 @@ export const addressClaimABI = [
   "function addViewer(address _viewer) public",
   "function removeViewer(address _viewer) public",
   "function revokeClaim() public",
+  "function getTotalClaims() public view returns (uint256)",
+  "function getClaimedAddressesCount() public view returns (uint256)",
+  "function getClaimedAddresses(uint256 offset, uint256 limit) public view returns (address[] memory)",
+  "function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory addresses, uint256 total)",
   "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
   "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)"
 ];

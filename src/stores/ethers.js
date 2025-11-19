@@ -27,6 +27,10 @@ function createEthersStore() {
     "function getIPFSCID(address _address) public view returns (string memory)",
     "function getPGPSignature(address _address) public view returns (string memory)",
     "function getDIDRoutingInfo(address _address) public view returns (string memory did, string memory ipfsCID)",
+    "function getTotalClaims() public view returns (uint256)",
+    "function getClaimedAddressesCount() public view returns (uint256)",
+    "function getClaimedAddresses(uint256 offset, uint256 limit) public view returns (address[] memory)",
+    "function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory addresses, uint256 total)",
     // DID-related functions
     "function resolveDID(string memory _did) public view returns (address)",
     "function getDIDDocument(address _address) public view returns (string memory did, address controller, uint256 created, uint256 updated)",

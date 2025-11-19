@@ -1,9 +1,12 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { ethers } from 'ethers';
   import { get } from 'svelte/store';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { lookupENSName } from '../utils/ens';
+  import { parseClaimData } from '../utils/claimParser';
+  import { loadWordlist, decodeHandle, formatHandle } from '../utils/wordhandles';
   import MultiChainView from './MultiChainView.svelte';
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
@@ -22,9 +25,12 @@
   let claimData = null;
   let isOwner = false;
   let userAddress = null;
+  let primaryChainId = null;
   let resolvedENSName = ensName;
   let provider = null;
   let contract = null;
+  let nativeCurrencySymbol = 'ETH';
+  let nativeCurrencyDecimals = 18;
   let socialGraphData = {
     following: [],
     followers: [],
@@ -35,6 +41,12 @@
   let loadingTransactions = false;
   let balance = '0';
   let loadingBalance = false;
+  let handleInfo = null;
+  let handleLoading = false;
+  let handleError = null;
+  let handleRequestId = 0;
+  let handleWordlist = [];
+  let handleWordlistPromise = null;
   // Initialize chainId from store's current value
   let chainId = get(multiChainStore).primaryChainId || 1;
 
@@ -44,11 +56,20 @@
 
   multiChainStore.subscribe(value => {
     userAddress = value.primaryAddress;
+    primaryChainId = value.primaryChainId || null;
+
+    const chainEntry = value.chains?.[value.primaryChainId];
+    provider = chainEntry?.provider || null;
+    contract = chainEntry?.contract || null;
+
+    const nativeCurrency = chainEntry?.networkConfig?.nativeCurrency;
+    nativeCurrencySymbol = nativeCurrency?.symbol || 'ETH';
+    nativeCurrencyDecimals = nativeCurrency?.decimals ?? 18;
     chainId = value.primaryChainId || 1;
-    // Get provider from the primary chain
-    provider = value.chains?.[value.primaryChainId]?.provider || null;
-    contract = value.chains?.[value.primaryChainId]?.contract || null;
   });
+
+  let balanceTrigger = null;
+  let handleTrigger = null;
 
   onMount(async () => {
     // Try to resolve ENS name if not already provided
@@ -79,18 +100,33 @@
       // Check if address is claimed
       try {
         const claim = await contract.getClaim(address);
-        if (claim.isActive) {
+        const parsedClaim = parseClaimData(claim);
+
+        if (parsedClaim?.isActive) {
+          const claimTimestamp = typeof parsedClaim.claimTime?.toNumber === 'function'
+            ? parsedClaim.claimTime.toNumber()
+            : Number(parsedClaim.claimTime || 0);
+
+          let pgpSignature = '';
+          if (typeof contract.getPGPSignature === 'function') {
+            try {
+              pgpSignature = await contract.getPGPSignature(address);
+            } catch (pgpError) {
+              console.warn('Error loading PGP signature:', pgpError);
+            }
+          }
+
           isClaimed = true;
           claimData = {
-            name: claim.metadata.name || 'Anonymous',
-            avatar: claim.metadata.avatar || '👤',
-            bio: claim.metadata.bio || '',
-            website: claim.metadata.website || '',
-            twitter: claim.metadata.twitter || '',
-            github: claim.metadata.github || '',
-            pgpSignature: claim.metadata.pgpSignature || '',
-            claimTime: Number(claim.claimTime) * 1000,
-            isPrivate: claim.metadata.isPrivate
+            name: parsedClaim.name || 'Anonymous',
+            avatar: parsedClaim.avatar || '👤',
+            bio: parsedClaim.bio || '',
+            website: parsedClaim.website || '',
+            twitter: parsedClaim.twitter || '',
+            github: parsedClaim.github || '',
+            pgpSignature: pgpSignature || '',
+            claimTime: claimTimestamp * 1000,
+            isPrivate: parsedClaim.isPrivate
           };
           isOwner = userAddress && userAddress.toLowerCase() === address.toLowerCase();
         }
@@ -120,18 +156,113 @@
     loading = false;
   });
 
+  function formatNativeAmount(valueWei) {
+    try {
+      const formatted = ethers.formatUnits(valueWei, nativeCurrencyDecimals);
+      return Number.parseFloat(formatted).toFixed(4);
+    } catch (error) {
+      console.warn('Failed to format native amount:', error);
+      return (Number(valueWei) / 1e18).toFixed(4);
+    }
+  }
+
   async function loadBalance() {
     if (!provider || !address) return;
     
     loadingBalance = true;
     try {
       const balanceWei = await provider.getBalance(address);
-      balance = (Number(balanceWei) / 1e18).toFixed(4);
+      balance = formatNativeAmount(balanceWei);
     } catch (error) {
       console.error('Error loading balance:', error);
       balance = '0';
     } finally {
       loadingBalance = false;
+    }
+  }
+
+  async function ensureHandleWordlist() {
+    if (handleWordlist.length) {
+      return handleWordlist;
+    }
+    if (handleWordlistPromise) {
+      return handleWordlistPromise;
+    }
+    handleWordlistPromise = loadWordlist()
+      .then(list => {
+        handleWordlist = list;
+        return list;
+      })
+      .finally(() => {
+        handleWordlistPromise = null;
+      });
+    return handleWordlistPromise;
+  }
+
+  async function refreshHandle(chainId, targetAddress) {
+    if (!chainId || !targetAddress) {
+      handleInfo = null;
+      handleError = null;
+      handleLoading = false;
+      return;
+    }
+
+    const requestId = ++handleRequestId;
+    handleLoading = true;
+    handleError = null;
+
+    try {
+      const result = await multiChainStore.getHandleForAddress(chainId, targetAddress);
+      if (requestId !== handleRequestId) {
+        return;
+      }
+      if (!result?.success || !result.handle) {
+        handleInfo = null;
+        return;
+      }
+      const vocab = await ensureHandleWordlist();
+      if (requestId !== handleRequestId) {
+        return;
+      }
+      const indices = decodeHandle(result.handle);
+      const withinBounds = vocab.length > 0 && indices.every(idx => idx < vocab.length);
+      handleInfo = {
+        phrase: withinBounds ? formatHandle(indices, vocab) : ethers.hexlify(result.handle),
+        hex: ethers.hexlify(result.handle),
+        indices
+      };
+    } catch (err) {
+      if (requestId !== handleRequestId) {
+        return;
+      }
+      handleInfo = null;
+      handleError = err?.message || 'Unable to load handle';
+      console.debug('Handle lookup failed:', err);
+    } finally {
+      if (requestId === handleRequestId) {
+        handleLoading = false;
+      }
+    }
+  }
+
+  $: {
+    const trigger = provider && address ? `${address}-${primaryChainId || 'na'}` : null;
+    if (trigger && trigger !== balanceTrigger) {
+      balanceTrigger = trigger;
+      loadBalance();
+    }
+  }
+
+  $: {
+    const trigger = primaryChainId && address ? `${primaryChainId}-${address}` : null;
+    if (trigger && trigger !== handleTrigger) {
+      handleTrigger = trigger;
+      refreshHandle(primaryChainId, address);
+    } else if (!trigger && handleTrigger) {
+      handleTrigger = null;
+      handleInfo = null;
+      handleError = null;
+      handleLoading = false;
     }
   }
 
@@ -151,18 +282,26 @@
       for (let i = 0; i < Math.min(5, currentBlock); i++) {
         const block = await provider.getBlock(currentBlock - i, true);
         if (block && block.transactions) {
-          for (const tx of block.transactions) {
-            if (typeof tx === 'object' && (tx.from?.toLowerCase() === address.toLowerCase() || 
-                tx.to?.toLowerCase() === address.toLowerCase())) {
+          for (const txRef of block.transactions) {
+            const fullTx =
+              typeof txRef === 'string'
+                ? await provider.getTransaction(txRef)
+                : txRef;
+            if (!fullTx) continue;
+
+            const fromMatches = fullTx.from?.toLowerCase() === address.toLowerCase();
+            const toMatches = fullTx.to?.toLowerCase() === address.toLowerCase();
+
+            if (fromMatches || toMatches) {
               txs.push({
-                hash: tx.hash,
-                from: tx.from,
-                to: tx.to || 'Contract Creation',
-                value: (Number(tx.value) / 1e18).toFixed(4),
+                hash: fullTx.hash,
+                from: fullTx.from,
+                to: fullTx.to || 'Contract Creation',
+                value: formatNativeAmount(fullTx.value),
                 blockNumber: block.number,
                 timestamp: block.timestamp
               });
-              
+
               if (txs.length >= 10) break;
             }
           }
@@ -247,6 +386,17 @@
           {#if isOwner}
             <div class="owner-badge">You own this address</div>
           {/if}
+          {#if handleLoading}
+            <div class="handle-chip loading">Loading word handle…</div>
+          {:else if handleInfo}
+            <div class="handle-chip">
+              <span>Word Handle</span>
+              <strong>{handleInfo.phrase}</strong>
+              <code>{handleInfo.hex}</code>
+            </div>
+          {:else if handleError}
+            <div class="handle-chip error">{handleError}</div>
+          {/if}
         </div>
 
         {#if claimData.bio}
@@ -323,8 +473,8 @@
 
         {#if isOwner}
           <div class="owner-actions">
-            <button class="btn-action btn-edit">Edit Profile</button>
-            <button class="btn-action btn-manage">Manage Privacy</button>
+            <button class="btn-action btn-edit" on:click={() => dispatch('viewChange', { view: 'claim' })}>Edit Profile</button>
+            <button class="btn-action btn-manage" on:click={() => dispatch('viewChange', { view: 'claim', params: { target: address, tab: 'privacy' } })}>Manage Privacy</button>
           </div>
         {/if}
       </div>
@@ -377,7 +527,7 @@
                     {#if loadingBalance}
                       <span class="loading-dots">...</span>
                     {:else}
-                      {balance} ETH
+                      {balance} {nativeCurrencySymbol}
                     {/if}
                   </div>
                 </div>
@@ -420,7 +570,7 @@
                         </div>
                         <div class="tx-row">
                           <span class="tx-label">Value:</span>
-                          <span class="tx-value">{tx.value} ETH</span>
+                          <span class="tx-value">{tx.value} {nativeCurrencySymbol}</span>
                         </div>
                         <div class="tx-row">
                           <span class="tx-label">Block:</span>
@@ -497,6 +647,17 @@
             <span class="ens-name">{resolvedENSName}</span>
           </div>
         {/if}
+        {#if handleLoading}
+          <div class="handle-chip loading">Loading word handle…</div>
+        {:else if handleInfo}
+          <div class="handle-chip">
+            <span>Word Handle</span>
+            <strong>{handleInfo.phrase}</strong>
+            <code>{handleInfo.hex}</code>
+          </div>
+        {:else if handleError}
+          <div class="handle-chip error">{handleError}</div>
+        {/if}
         <p>This address has not been claimed yet. The owner can claim it to add verified metadata.</p>
         
         {#if userAddress === address}
@@ -550,7 +711,7 @@
                     {#if loadingBalance}
                       <span class="loading-dots">...</span>
                     {:else}
-                      {balance} ETH
+                      {balance} {nativeCurrencySymbol}
                     {/if}
                   </div>
                 </div>
@@ -593,7 +754,7 @@
                         </div>
                         <div class="tx-row">
                           <span class="tx-label">Value:</span>
-                          <span class="tx-value">{tx.value} ETH</span>
+                          <span class="tx-value">{tx.value} {nativeCurrencySymbol}</span>
                         </div>
                         <div class="tx-row">
                           <span class="tx-label">Block:</span>
@@ -1254,6 +1415,59 @@
   .ens-display .ens-name {
     font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
     font-size: 1.1rem;
+  }
+
+  .handle-chip {
+    margin-top: 1rem;
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    border: 1px solid #bae6fd;
+    background: #eff6ff;
+    color: #0f172a;
+    font-size: 0.95rem;
+  }
+
+  .handle-chip strong {
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  .handle-chip code {
+    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-size: 0.85rem;
+    background: rgba(15, 23, 42, 0.08);
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+  }
+
+  .handle-chip.loading {
+    color: #475569;
+  }
+
+  .handle-chip.error {
+    border-color: #fecaca;
+    background: #fff1f2;
+    color: #b91c1c;
+  }
+
+  .address-view.dark .handle-chip {
+    background: rgba(14, 165, 233, 0.15);
+    border-color: rgba(14, 165, 233, 0.5);
+    color: #e0f2fe;
+  }
+
+  .address-view.dark .handle-chip code {
+    background: rgba(15, 23, 42, 0.6);
+    color: #f8fafc;
+  }
+
+  .address-view.dark .handle-chip.error {
+    background: rgba(248, 113, 113, 0.18);
+    border-color: rgba(248, 113, 113, 0.6);
+    color: #fecaca;
   }
 
   .unclaimed-card p {
