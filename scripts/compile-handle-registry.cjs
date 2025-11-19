@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 const path = require('path');
-const { compileContract } = require('./utils/contractCompiler');
-const { generateBip39Vocabulary } = require('./utils/generateBip39Vocabulary');
+const { compileContract } = require('./utils/contractCompiler.cjs');
+const { generateBip39Vocabulary } = require('./utils/generateBip39Vocabulary.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 

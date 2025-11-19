@@ -1,10 +1,16 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
-  import { ethers } from 'ethers';
-  import { multiChainStore } from '../stores/multichain';
-  import { themeStore } from '../stores/theme';
-  import { lookupENSName } from '../utils/ens';
-  import { loadWordlist, encodeHandle, formatHandle, decodeHandle, suggestHandleIndices } from '../utils/wordhandles';
+  import { createEventDispatcher, onMount } from "svelte";
+  import { ethers } from "ethers";
+  import { multiChainStore } from "../stores/multichain";
+  import { themeStore } from "../stores/theme";
+  import { lookupENSName } from "../utils/ens";
+  import {
+    loadWordlist,
+    encodeHandle,
+    formatHandle,
+    decodeHandle,
+    suggestHandleIndices,
+  } from "../utils/wordhandles";
 
   const dispatch = createEventDispatcher();
 
@@ -23,14 +29,14 @@
 
   // Form data
   let formData = {
-    name: '',
-    avatar: '',
-    bio: '',
-    website: '',
-    twitter: '',
-    github: '',
-    pgpSignature: '',
-    isPrivate: false
+    name: "",
+    avatar: "",
+    bio: "",
+    website: "",
+    twitter: "",
+    github: "",
+    pgpSignature: "",
+    isPrivate: false,
   };
 
   // Word handle state
@@ -56,7 +62,7 @@
   let handleStateRequestId = 0;
   let handleSuggestionRequestId = 0;
 
-  themeStore.subscribe(value => {
+  themeStore.subscribe((value) => {
     darkMode = value.darkMode;
   });
 
@@ -64,6 +70,7 @@
   let currentLookupId = 0; // Track the latest lookup request
   let isMounted = true; // Track component mount state
   let claimStatusRequestId = 0;
+  let previousChainId = null; // Track chain changes
 
   function resetHandleState() {
     handleStateRequestId += 1;
@@ -93,12 +100,12 @@
     wordlistLoading = true;
     wordlistError = null;
     wordlistPromise = loadWordlist()
-      .then(list => {
+      .then((list) => {
         wordlist = list;
         return list;
       })
-      .catch(err => {
-        wordlistError = err?.message || 'Failed to load wordlist';
+      .catch((err) => {
+        wordlistError = err?.message || "Failed to load wordlist";
         throw err;
       })
       .finally(() => {
@@ -112,12 +119,13 @@
     try {
       const indices = decodeHandle(encodedHandle);
       const vocab = wordlist;
-      const hasVocab = vocab.length > 0 && indices.every(idx => idx < vocab.length);
+      const hasVocab =
+        vocab.length > 0 && indices.every((idx) => idx < vocab.length);
       return {
         indices,
-        words: hasVocab ? indices.map(idx => vocab[idx]) : [],
-        phrase: hasVocab ? formatHandle(indices, vocab) : indices.join('-'),
-        hex: ethers.hexlify(encodedHandle)
+        words: hasVocab ? indices.map((idx) => vocab[idx]) : [],
+        phrase: hasVocab ? formatHandle(indices, vocab) : indices.join("-"),
+        hex: ethers.hexlify(encodedHandle),
       };
     } catch (err) {
       const hexValue = ethers.hexlify(encodedHandle);
@@ -125,7 +133,7 @@
         indices: [],
         words: [],
         phrase: hexValue,
-        hex: hexValue
+        hex: hexValue,
       };
     }
   }
@@ -147,10 +155,14 @@
       }
 
       if (!infoResult?.success) {
-        console.debug('[wordhandles] registry info unavailable', infoResult?.error);
+        console.debug(
+          "[wordhandles] registry info unavailable",
+          infoResult?.error,
+        );
         handleRegistrySupported = false;
         handleRegistryInfo = null;
-        handleRegistryError = infoResult?.error || 'Handle registry unavailable on this chain';
+        handleRegistryError =
+          infoResult?.error || "Handle registry unavailable on this chain";
         existingHandle = null;
         return;
       }
@@ -162,10 +174,13 @@
       try {
         await ensureWordlistLoaded();
       } catch (wordErr) {
-        console.warn('Wordlist load failed:', wordErr);
+        console.warn("Wordlist load failed:", wordErr);
       }
 
-      const handleResult = await multiChainStore.getHandleForAddress(chainId, targetAddress);
+      const handleResult = await multiChainStore.getHandleForAddress(
+        chainId,
+        targetAddress,
+      );
       if (!isMounted || requestId !== handleStateRequestId) {
         return;
       }
@@ -178,17 +193,22 @@
         existingHandle = null;
       }
 
-      if (!existingHandle && handleRegistrySupported && !handleSuggestion && !handleSuggestionLoading) {
+      if (
+        !existingHandle &&
+        handleRegistrySupported &&
+        !handleSuggestion &&
+        !handleSuggestionLoading
+      ) {
         generateHandleSuggestion();
       }
     } catch (err) {
       if (!isMounted || requestId !== handleStateRequestId) {
         return;
       }
-      console.error('[wordhandles] failed to sync handle registry state', err);
+      console.error("[wordhandles] failed to sync handle registry state", err);
       handleRegistrySupported = false;
       handleRegistryInfo = null;
-      handleRegistryError = err?.message || 'Unable to load handle registry';
+      handleRegistryError = err?.message || "Unable to load handle registry";
       existingHandle = null;
     } finally {
       if (requestId === handleStateRequestId) {
@@ -211,7 +231,7 @@
     if (reset && handleSuggestion?.encoded && handleRegistryInfo?.vocabHash) {
       const saltSource = ethers.concat([
         ethers.getBytes(handleRegistryInfo.vocabHash),
-        handleSuggestion.encoded
+        handleSuggestion.encoded,
       ]);
       const hash = ethers.keccak256(saltSource);
       const slice = ethers.dataSlice(hash, ethers.dataLength(hash) - 4);
@@ -230,13 +250,18 @@
         minLength: minTokens,
         maxLength: maxTokens,
         isClaimed: async (encoded) => {
-          const availability = await multiChainStore.isHandleTakenOnChain(primaryChainId, encoded);
+          const availability = await multiChainStore.isHandleTakenOnChain(
+            primaryChainId,
+            encoded,
+          );
           if (!availability?.success) {
-            throw new Error(availability?.error || 'Unable to verify handle availability');
+            throw new Error(
+              availability?.error || "Unable to verify handle availability",
+            );
           }
           return availability.isTaken;
         },
-        seedSalt
+        seedSalt,
       });
 
       if (!isMounted || requestId !== handleSuggestionRequestId) {
@@ -246,18 +271,19 @@
       const encoded = encodeHandle(indices);
       handleSuggestion = {
         indices,
-        words: indices.map(idx => vocab[idx]),
+        words: indices.map((idx) => vocab[idx]),
         phrase: formatHandle(indices, vocab),
         hex: ethers.hexlify(encoded),
         encoded,
-        seedSalt
+        seedSalt,
       };
     } catch (err) {
       if (!isMounted || requestId !== handleSuggestionRequestId) {
         return;
       }
       handleSuggestion = null;
-      handleSuggestionError = err?.message || 'Failed to generate handle suggestion';
+      handleSuggestionError =
+        err?.message || "Failed to generate handle suggestion";
     } finally {
       if (requestId === handleSuggestionRequestId) {
         handleSuggestionLoading = false;
@@ -281,8 +307,8 @@
       handleSuggestion = null;
       await syncHandleRegistryState(address, primaryChainId);
     } catch (err) {
-      handleClaimError = err?.message || 'Failed to claim handle';
-      console.error('Handle claim error:', err);
+      handleClaimError = err?.message || "Failed to claim handle";
+      console.error("Handle claim error:", err);
     } finally {
       handleClaiming = false;
     }
@@ -302,8 +328,8 @@
       await multiChainStore.releaseHandleOnPrimaryChain();
       await syncHandleRegistryState(address, primaryChainId);
     } catch (err) {
-      releaseHandleError = err?.message || 'Failed to release handle';
-      console.error('Handle release error:', err);
+      releaseHandleError = err?.message || "Failed to release handle";
+      console.error("Handle release error:", err);
     } finally {
       releaseHandleLoading = false;
     }
@@ -311,34 +337,38 @@
 
   onMount(() => {
     isMounted = true;
-    
+
     // Subscribe to multichain store
-    unsubscribeMultiChain = multiChainStore.subscribe(async value => {
+    unsubscribeMultiChain = multiChainStore.subscribe(async (value) => {
       connected = value.connected;
       const newAddress = value.primaryAddress;
-      const newProvider = value.chains?.[value.primaryChainId]?.provider || null;
+      const newProvider =
+        value.chains?.[value.primaryChainId]?.provider || null;
       const newChainId = value.primaryChainId;
+      const chainChanged =
+        newChainId !== null && newChainId !== previousChainId;
+      previousChainId = newChainId;
       primaryChainId = newChainId;
 
       // If address or provider changed, update and lookup ENS name
       if (newAddress !== address || newProvider !== provider) {
         address = newAddress;
         provider = newProvider;
-        
+
         // Lookup ENS name if we have both address and provider
         if (address && provider) {
           // Increment lookup ID to track this specific request
           const lookupId = ++currentLookupId;
-          
+
           try {
             const resolvedName = await lookupENSName(address, provider);
-            
+
             // Only update if this is still the most recent lookup and component is still mounted
             if (lookupId === currentLookupId && isMounted) {
               ensName = resolvedName;
             }
           } catch (err) {
-            console.error('Error looking up ENS name:', err);
+            console.error("Error looking up ENS name:", err);
             // Only clear ensName if this is still the most recent lookup and component is still mounted
             if (lookupId === currentLookupId && isMounted) {
               ensName = null;
@@ -349,9 +379,13 @@
         }
       }
 
+      // Refresh data if we have an address and chainId, OR if the chain changed
       if (address && newChainId) {
-        refreshClaimStatus(address, newChainId);
-        syncHandleRegistryState(address, newChainId);
+        // Always refresh on chain change, or when address/chainId first become available
+        if (chainChanged || newAddress !== address) {
+          refreshClaimStatus(address, newChainId);
+          syncHandleRegistryState(address, newChainId);
+        }
       } else {
         hasExistingClaim = false;
         claimStatusError = null;
@@ -370,12 +404,12 @@
 
   async function handleClaim() {
     if (!connected) {
-      error = 'Please connect your wallet first';
+      error = "Please connect your wallet first";
       return;
     }
 
     if (!formData.name) {
-      error = 'Name is required';
+      error = "Name is required";
       return;
     }
 
@@ -397,22 +431,22 @@
         publicKey: null,
         pgpSignature: formData.pgpSignature,
         isPrivate: formData.isPrivate,
-        ipfsCID: ''
+        ipfsCID: "",
       });
 
       success = true;
       loading = false;
-      console.log('Address claimed on-chain:', result.transactionHash);
+      console.log("Address claimed on-chain:", result.transactionHash);
       hasExistingClaim = true;
       claimStatusError = null;
 
       setTimeout(() => {
-        dispatch('viewChange', { view: 'address', address });
+        dispatch("viewChange", { view: "address", address });
       }, 1800);
     } catch (err) {
       loading = false;
-      error = err?.message || 'Failed to claim address';
-      console.error('Claim error:', err);
+      error = err?.message || "Failed to claim address";
+      console.error("Claim error:", err);
     }
   }
 
@@ -428,7 +462,10 @@
     claimStatusError = null;
 
     try {
-      const result = await multiChainStore.checkClaimOnChain(chainId, targetAddress);
+      const result = await multiChainStore.checkClaimOnChain(
+        chainId,
+        targetAddress,
+      );
       if (!isMounted || requestId !== claimStatusRequestId) {
         return;
       }
@@ -444,8 +481,8 @@
         return;
       }
       hasExistingClaim = false;
-      claimStatusError = err?.message || 'Unable to check claim status';
-      console.error('Claim status check error:', err);
+      claimStatusError = err?.message || "Unable to check claim status";
+      console.error("Claim status check error:", err);
     } finally {
       if (requestId === claimStatusRequestId) {
         checkingClaimStatus = false;
@@ -454,7 +491,7 @@
   }
 
   function goBack() {
-    dispatch('viewChange', { view: 'explorer' });
+    dispatch("viewChange", { view: "explorer" });
   }
 </script>
 
@@ -497,7 +534,10 @@
           <div class="warning-icon">ℹ️</div>
           <div>
             <h3>Address already claimed</h3>
-            <p>This wallet has an active claim on the current network. You can update or revoke it from the explorer.</p>
+            <p>
+              This wallet has an active claim on the current network. You can
+              update or revoke it from the explorer.
+            </p>
           </div>
         </div>
       {/if}
@@ -573,13 +613,17 @@
           placeholder="-----BEGIN PGP SIGNATURE-----&#10;...&#10;-----END PGP SIGNATURE-----"
           rows="6"
         ></textarea>
-        <small class="form-hint">Add your PGP signature for additional verification</small>
+        <small class="form-hint"
+          >Add your PGP signature for additional verification</small
+        >
       </div>
 
       <div class="form-group checkbox-group">
         <label>
           <input type="checkbox" bind:checked={formData.isPrivate} />
-          <span>Make metadata private (visible only to whitelisted addresses)</span>
+          <span
+            >Make metadata private (visible only to whitelisted addresses)</span
+          >
         </label>
       </div>
 
@@ -596,7 +640,14 @@
       {/if}
 
       <div class="form-actions">
-        <button class="btn-claim" on:click={handleClaim} disabled={loading || success || hasExistingClaim || checkingClaimStatus}>
+        <button
+          class="btn-claim"
+          on:click={handleClaim}
+          disabled={loading ||
+            success ||
+            hasExistingClaim ||
+            checkingClaimStatus}
+        >
           {#if loading}
             Claiming...
           {:else if success}
@@ -633,13 +684,17 @@
               <div class="handle-meta">
                 <code>{existingHandle.hex}</code>
                 {#if existingHandle.indices.length}
-                  <span>Indices: {existingHandle.indices.join(', ')}</span>
+                  <span>Indices: {existingHandle.indices.join(", ")}</span>
                 {/if}
               </div>
               {#if releaseHandleError}
                 <div class="error-box inline">{releaseHandleError}</div>
               {/if}
-              <button class="btn-release" on:click={releaseWordHandle} disabled={releaseHandleLoading}>
+              <button
+                class="btn-release"
+                on:click={releaseWordHandle}
+                disabled={releaseHandleLoading}
+              >
                 {#if releaseHandleLoading}
                   Releasing...
                 {:else}
@@ -653,7 +708,7 @@
                 <div class="handle-phrase">{handleSuggestion.phrase}</div>
                 <div class="handle-meta">
                   <code>{handleSuggestion.hex}</code>
-                  <span>{handleSuggestion.words.join(' · ')}</span>
+                  <span>{handleSuggestion.words.join(" · ")}</span>
                 </div>
               {:else}
                 <p class="handle-placeholder">
@@ -674,18 +729,24 @@
               {/if}
 
               {#if wordlistError}
-                <div class="error-box inline">Vocabulary error: {wordlistError}</div>
+                <div class="error-box inline">
+                  Vocabulary error: {wordlistError}
+                </div>
               {/if}
 
               {#if handleClaimSuccess}
-                <div class="success-box inline">Handle claimed successfully!</div>
+                <div class="success-box inline">
+                  Handle claimed successfully!
+                </div>
               {/if}
 
               <div class="handle-actions">
                 <button
                   class="btn-secondary"
                   on:click={() => generateHandleSuggestion({ reset: true })}
-                  disabled={handleSuggestionLoading || handleClaiming || wordlistLoading}
+                  disabled={handleSuggestionLoading ||
+                    handleClaiming ||
+                    wordlistLoading}
                 >
                   {#if handleSuggestionLoading}
                     Working...
@@ -698,7 +759,9 @@
                 <button
                   class="btn-handle-claim"
                   on:click={claimWordHandle}
-                  disabled={!handleSuggestion || handleSuggestionLoading || handleClaiming}
+                  disabled={!handleSuggestion ||
+                    handleSuggestionLoading ||
+                    handleClaiming}
                 >
                   {#if handleClaiming}
                     Claiming...
@@ -712,7 +775,10 @@
         {:else}
           <div class="info-box subtle">
             <strong>Word handles unavailable</strong>
-            <p>{handleRegistryError || 'This network does not have a handle registry yet.'}</p>
+            <p>
+              {handleRegistryError ||
+                "This network does not have a handle registry yet."}
+            </p>
           </div>
         {/if}
       </div>
@@ -877,7 +943,8 @@
   }
 
   .address-display {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New",
+      monospace;
     font-weight: 600;
     color: #0f172a;
     font-size: 1.1rem;
@@ -916,7 +983,8 @@
   }
 
   .ens-text strong {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New",
+      monospace;
   }
 
   .form-group {
@@ -1176,7 +1244,8 @@
   }
 
   .handle-meta code {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New",
+      monospace;
     background: #f1f5f9;
     padding: 0.35rem 0.6rem;
     border-radius: 8px;

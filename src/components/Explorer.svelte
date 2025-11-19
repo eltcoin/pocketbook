@@ -1,18 +1,22 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
-  import { ethers } from 'ethers';
-  import { ethersStore } from '../stores/ethers';
-  import { multiChainStore } from '../stores/multichain';
-  import { themeStore } from '../stores/theme';
-  import { resolveAddressOrENS, isENSName } from '../utils/ens';
-  import { parseClaimData } from '../utils/claimParser';
-  import { loadWordlist, decodeHandle, formatHandle } from '../utils/wordhandles';
-  import Icon from './Icon.svelte';
+  import { createEventDispatcher, onMount } from "svelte";
+  import { ethers } from "ethers";
+  import { ethersStore } from "../stores/ethers";
+  import { multiChainStore } from "../stores/multichain";
+  import { themeStore } from "../stores/theme";
+  import { resolveAddressOrENS, isENSName } from "../utils/ens";
+  import { parseClaimData } from "../utils/claimParser";
+  import {
+    loadWordlist,
+    decodeHandle,
+    formatHandle,
+  } from "../utils/wordhandles";
+  import Icon from "./Icon.svelte";
 
   const dispatch = createEventDispatcher();
 
   let darkMode = false;
-  let searchAddress = '';
+  let searchAddress = "";
   let recentClaims = [];
   let loading = false;
   let searchError = null;
@@ -24,6 +28,7 @@
   let dataReloadPromise = null;
   let activeInfoModal = null;
   let contractChainId = null;
+  let previousChainId = null;
   let explorerHandleChainId = null;
   let explorerHandleAvailable = false;
   let handleWordlist = [];
@@ -32,53 +37,57 @@
   const createEmptyStats = () => ({
     claimedAddresses: 0,
     activeUsers: 0,
-    contractClaims: 0
+    contractClaims: 0,
   });
 
   let stats = createEmptyStats();
   let chainStats = [];
   let loadingChainStats = true;
+  let chainStatsQueued = false;
+  let recentClaimsLoadTimer = null;
   let totalNetworks = 0;
   let handleReadyNetworks = 0;
   let recentClaimsSeededFromStats = false;
   let cachedViewStats = null;
   $: totalNetworks = chainStats.length;
-  $: handleReadyNetworks = chainStats.filter(stat => stat.handleRegistryAvailable).length;
+  $: handleReadyNetworks = chainStats.filter(
+    (stat) => stat.handleRegistryAvailable,
+  ).length;
 
   const infoHighlights = [
     {
-      id: 'identity',
-      title: 'Own Your Identity',
-      icon: 'shield-alt',
-      summary: 'Claim your address with verifiable metadata.',
+      id: "identity",
+      title: "Own Your Identity",
+      icon: "shield-alt",
+      summary: "Claim your address with verifiable metadata.",
       details: [
-        'Bind ENS names, avatars, and biographies directly to your wallet.',
-        'Generate DID-compatible identifiers for cross-platform trust.',
-        'Sign metadata updates so dapps can independently verify ownership.'
-      ]
+        "Bind ENS names, avatars, and biographies directly to your wallet.",
+        "Generate DID-compatible identifiers for cross-platform trust.",
+        "Sign metadata updates so dapps can independently verify ownership.",
+      ],
     },
     {
-      id: 'network',
-      title: 'Decentralized Network',
-      icon: 'network-wired',
-      summary: 'Build a web of trust without a central authority.',
+      id: "network",
+      title: "Decentralized Network",
+      icon: "network-wired",
+      summary: "Build a web of trust without a central authority.",
       details: [
-        'Follow, friend, and attest to other wallets entirely on-chain.',
-        'Multi-chain support lets you reuse the same identity everywhere.',
-        'Events are indexed so explorers and dapps can surface social graphs.'
-      ]
+        "Follow, friend, and attest to other wallets entirely on-chain.",
+        "Multi-chain support lets you reuse the same identity everywhere.",
+        "Events are indexed so explorers and dapps can surface social graphs.",
+      ],
     },
     {
-      id: 'privacy',
-      title: 'Privacy Control',
-      icon: 'lock',
-      summary: 'Decide who can read sensitive metadata.',
+      id: "privacy",
+      title: "Privacy Control",
+      icon: "lock",
+      summary: "Decide who can read sensitive metadata.",
       details: [
-        'Toggle public/private mode for any field in your profile.',
-        'Whitelist trusted viewers and rotate access at any time.',
-        'Store extended metadata on IPFS while keeping keys on-chain.'
-      ]
-    }
+        "Toggle public/private mode for any field in your profile.",
+        "Whitelist trusted viewers and rotate access at any time.",
+        "Store extended metadata on IPFS while keeping keys on-chain.",
+      ],
+    },
   ];
 
   function resetExplorerData({ keepLoading = false } = {}) {
@@ -100,11 +109,17 @@
       return targetContract.runner.provider;
     }
 
-    if (targetContract.runner && typeof targetContract.runner.getBlockNumber === 'function') {
+    if (
+      targetContract.runner &&
+      typeof targetContract.runner.getBlockNumber === "function"
+    ) {
       return targetContract.runner;
     }
 
-    if (targetContract.provider && typeof targetContract.provider.getBlockNumber === 'function') {
+    if (
+      targetContract.provider &&
+      typeof targetContract.provider.getBlockNumber === "function"
+    ) {
       return targetContract.provider;
     }
 
@@ -115,7 +130,12 @@
     if (!chainData) {
       return null;
     }
-    return chainData.readContract || chainData.contract || chainData.writeContract || null;
+    return (
+      chainData.readContract ||
+      chainData.contract ||
+      chainData.writeContract ||
+      null
+    );
   }
 
   function deriveExplorerContract(storeValue) {
@@ -132,19 +152,19 @@
         return {
           contract: readableContract,
           name: chainData.networkConfig?.name || null,
-          chainId: chainData.networkConfig?.chainId || null
+          chainId: chainData.networkConfig?.chainId || null,
         };
       }
     }
 
-    const fallbackEntry = Object.values(chains).find(chain => {
+    const fallbackEntry = Object.values(chains).find((chain) => {
       return getReadableContract(chain) && chain?.isAvailable !== false;
     });
     if (fallbackEntry) {
       return {
         contract: getReadableContract(fallbackEntry),
         name: fallbackEntry.networkConfig?.name || null,
-        chainId: fallbackEntry.networkConfig?.chainId || null
+        chainId: fallbackEntry.networkConfig?.chainId || null,
       };
     }
 
@@ -159,7 +179,7 @@
       return handleWordlistPromise;
     }
     handleWordlistPromise = loadWordlist()
-      .then(list => {
+      .then((list) => {
         handleWordlist = list;
         return list;
       })
@@ -192,7 +212,7 @@
       explorerHandleAvailable = true;
       return true;
     } catch (error) {
-      console.debug('Handle registry unavailable for explorer:', error);
+      console.debug("Handle registry unavailable for explorer:", error);
       explorerHandleAvailable = false;
       return false;
     }
@@ -204,20 +224,26 @@
     }
 
     try {
-      const result = await multiChainStore.getHandleForAddress(chainId, address);
+      const result = await multiChainStore.getHandleForAddress(
+        chainId,
+        address,
+      );
       if (!result?.success || !result.handle) {
         return null;
       }
       const vocab = await ensureHandleWordlist();
       const indices = decodeHandle(result.handle);
-      const withinBounds = vocab.length > 0 && indices.every(idx => idx < vocab.length);
-      const phrase = withinBounds ? formatHandle(indices, vocab) : ethers.hexlify(result.handle);
+      const withinBounds =
+        vocab.length > 0 && indices.every((idx) => idx < vocab.length);
+      const phrase = withinBounds
+        ? formatHandle(indices, vocab)
+        : ethers.hexlify(result.handle);
       return {
         phrase,
-        hex: ethers.hexlify(result.handle)
+        hex: ethers.hexlify(result.handle),
       };
     } catch (error) {
-      console.debug('Failed to fetch handle for explorer card:', error);
+      console.debug("Failed to fetch handle for explorer card:", error);
       return null;
     }
   }
@@ -235,31 +261,40 @@
     const handleChainId = handleChainIdOverride;
 
     dataReloadPromise = (async () => {
-      await loadStats(targetContract);
-      await delay(200);
-      await loadRecentClaims(targetContract, handleChainId);
+      scheduleChainStatsLoad();
+      await loadStats();
+      stageRecentClaimsLoad(targetContract, handleChainId);
+    })().finally(() => {
       dataReloadPromise = null;
-    })();
+    });
 
     return dataReloadPromise;
   }
 
-  themeStore.subscribe(value => {
+  themeStore.subscribe((value) => {
     darkMode = value.darkMode;
   });
 
-  ethersStore.subscribe(value => {
+  ethersStore.subscribe((value) => {
     provider = value.provider;
   });
 
-  multiChainStore.subscribe(value => {
+  multiChainStore.subscribe((value) => {
     chainsInitialized = (value.initializedChains?.length || 0) > 0;
 
-    const { contract: nextContract, name, chainId: nextChainId } = deriveExplorerContract(value);
+    const {
+      contract: nextContract,
+      name,
+      chainId: nextChainId,
+    } = deriveExplorerContract(value);
     contractNetworkName = name || null;
+    const chainChanged =
+      nextChainId !== null && nextChainId !== previousChainId;
+    previousChainId = nextChainId;
     contractChainId = nextChainId || null;
 
-    if (nextContract !== contract) {
+    // Refresh data if contract changed OR if chain changed (network switch)
+    if (nextContract !== contract || (chainChanged && nextContract)) {
       contract = nextContract;
       if (contract) {
         resetExplorerData({ keepLoading: true });
@@ -281,79 +316,90 @@
     await refreshExplorerData(contractChainId);
   });
 
-  async function loadStats(targetContract = contract) {
-    if (!targetContract) {
-      return;
-    }
-
+  async function loadStats() {
     loadingStats = true;
 
     try {
-      const viewStats = await fetchStatsViaView(targetContract, 3);
-      if (viewStats) {
-        if (targetContract === contract) {
-          stats = {
-            claimedAddresses: viewStats.totalClaims,
-            activeUsers: viewStats.totalClaims,
-            contractClaims: viewStats.totalClaims
-          };
-          recentClaimsSeededFromStats = await buildRecentClaimsFromAddresses(viewStats.recentAddresses, targetContract);
-          cachedViewStats = viewStats;
-        }
-        return;
+      const aggregatedStats =
+        chainStats.length > 0
+          ? chainStats
+          : await multiChainStore.getExplorerStats();
+
+      if (aggregatedStats && aggregatedStats.length) {
+        chainStats = aggregatedStats;
       }
 
-      cachedViewStats = null;
-      recentClaimsSeededFromStats = false;
+      const claimTotals = (aggregatedStats || []).reduce(
+        (sum, stat) => sum + (stat?.claimedCount || 0),
+        0,
+      );
 
-      let claimFilter;
-      try {
-        claimFilter = targetContract.filters.AddressClaimed();
-      } catch (filterError) {
-        console.error('[Explorer] Failed to build AddressClaimed filter. Does the ABI include the event?', filterError);
-        claimFilter = {
-          address: targetContract.target,
-          topics: [
-            '0xb0174747c5fea45e2ab2159ce19603239fc4ed7e3850bb6d6e753cfabd12f461'
-          ]
-        };
-      }
-      console.debug('[Explorer] Loading stats with contract:', targetContract.target);
-      const events = await fetchEventsWithAdaptiveLookback(targetContract, claimFilter, {
-        initialLookback: 4000,
-        maxLookback: 80000,
-        chunkSize: 250,
-        maxEvents: 600,
-        minEvents: 1,
-        historyLimitBlocks: 800000
-      });
-      console.debug('[Explorer] Stats events found:', events.length);
-
-      if (targetContract !== contract) {
-        return;
-      }
-
-      if (events.length === 0) {
-        console.warn('[Explorer] No AddressClaimed events found during stats load.');
-      }
       stats = {
-        claimedAddresses: events.length,
-        activeUsers: events.length,
-        contractClaims: events.length
+        claimedAddresses: claimTotals,
+        activeUsers: claimTotals,
+        contractClaims: claimTotals,
       };
     } catch (error) {
-      if (targetContract === contract) {
-        console.error('Error loading stats:', error);
-        stats = createEmptyStats();
-      }
+      console.error("Error loading aggregate stats:", error);
+      stats = createEmptyStats();
     } finally {
-      if (targetContract === contract) {
-        loadingStats = false;
-      }
+      loadingStats = false;
     }
   }
 
-  async function loadRecentClaims(targetContract = contract, handleChainId = contractChainId) {
+  async function loadChainStatsSection() {
+    loadingChainStats = true;
+    try {
+      chainStats = await multiChainStore.getExplorerStats();
+    } catch (error) {
+      console.error("Failed to load chain stats:", error);
+      chainStats = [];
+    } finally {
+      loadingChainStats = false;
+    }
+  }
+
+  function scheduleChainStatsLoad() {
+    if (chainStatsQueued || chainStats.length > 0) {
+      return;
+    }
+    chainStatsQueued = true;
+    const runner = () => {
+      chainStatsQueued = false;
+      if (chainStats.length > 0) {
+        return;
+      }
+      loadChainStatsSection().catch((error) =>
+        console.error("Chain stats load failed:", error),
+      );
+    };
+
+    if (
+      typeof window !== "undefined" &&
+      typeof window.requestIdleCallback === "function"
+    ) {
+      window.requestIdleCallback(() => runner(), { timeout: 1200 });
+    } else {
+      setTimeout(runner, 50);
+    }
+  }
+
+  function stageRecentClaimsLoad(targetContract, handleChainId) {
+    if (recentClaimsLoadTimer) {
+      clearTimeout(recentClaimsLoadTimer);
+    }
+    recentClaimsLoadTimer = setTimeout(() => {
+      recentClaimsLoadTimer = null;
+      if (contract === targetContract) {
+        loadRecentClaims(targetContract, handleChainId);
+      }
+    }, 150);
+  }
+
+  async function loadRecentClaims(
+    targetContract = contract,
+    handleChainId = contractChainId,
+  ) {
     if (!targetContract) {
       recentClaims = [];
       return;
@@ -365,7 +411,7 @@
         try {
           handleSupport = await ensureExplorerHandleSupport(handleChainId);
         } catch (handleError) {
-          console.debug('Handle support check failed:', handleError);
+          console.debug("Handle support check failed:", handleError);
           handleSupport = false;
         }
       }
@@ -374,8 +420,14 @@
         return;
       }
 
-      if (cachedViewStats?.recentAddresses?.length && targetContract === contract) {
-        const seeded = await buildRecentClaimsFromAddresses(cachedViewStats.recentAddresses, targetContract);
+      if (
+        cachedViewStats?.recentAddresses?.length &&
+        targetContract === contract
+      ) {
+        const seeded = await buildRecentClaimsFromAddresses(
+          cachedViewStats.recentAddresses,
+          targetContract,
+        );
         recentClaimsSeededFromStats = seeded;
         cachedViewStats = null;
         if (seeded) {
@@ -385,7 +437,10 @@
 
       const viewStats = await fetchStatsViaView(targetContract, 3);
       if (viewStats) {
-        const seeded = await buildRecentClaimsFromAddresses(viewStats.recentAddresses, targetContract);
+        const seeded = await buildRecentClaimsFromAddresses(
+          viewStats.recentAddresses,
+          targetContract,
+        );
         if (seeded && targetContract === contract) {
           recentClaimsSeededFromStats = true;
         }
@@ -401,34 +456,44 @@
       try {
         claimFilter = targetContract.filters.AddressClaimed();
       } catch (filterError) {
-        console.error('[Explorer] Failed to build AddressClaimed filter for recent claims:', filterError);
+        console.error(
+          "[Explorer] Failed to build AddressClaimed filter for recent claims:",
+          filterError,
+        );
         claimFilter = {
           address: targetContract.target,
           topics: [
-            '0xb0174747c5fea45e2ab2159ce19603239fc4ed7e3850bb6d6e753cfabd12f461'
-          ]
+            "0xb0174747c5fea45e2ab2159ce19603239fc4ed7e3850bb6d6e753cfabd12f461",
+          ],
         };
       }
-      console.debug('[Explorer] Loading recent claims with contract:', targetContract.target);
-      const events = await fetchEventsWithAdaptiveLookback(targetContract, claimFilter, {
-        initialLookback: 2500,
-        maxLookback: 80000,
-        chunkSize: 200,
-        maxEvents: 12,
-        minEvents: 3,
-        historyLimitBlocks: 800000
-      });
-      console.debug('[Explorer] Recent claim events found:', events.length);
+      console.debug(
+        "[Explorer] Loading recent claims with contract:",
+        targetContract.target,
+      );
+      const events = await fetchEventsWithAdaptiveLookback(
+        targetContract,
+        claimFilter,
+        {
+          initialLookback: 2500,
+          maxLookback: 80000,
+          chunkSize: 200,
+          maxEvents: 12,
+          minEvents: 3,
+          historyLimitBlocks: 800000,
+        },
+      );
+      console.debug("[Explorer] Recent claim events found:", events.length);
 
       const recentEvents = events.slice(-3).reverse();
 
       const claimsData = await Promise.all(
         recentEvents.map(async (event) => {
           const eventAddress = event.args?.claimedAddress || event.args?.[0];
-          console.debug('[Explorer] Processing claim event', {
+          console.debug("[Explorer] Processing claim event", {
             address: eventAddress,
             blockNumber: event.blockNumber,
-            tx: event.transactionHash
+            tx: event.transactionHash,
           });
           const address = eventAddress;
           if (!address) {
@@ -436,12 +501,14 @@
           }
 
           const timestampValue = event.args?.timestamp ?? event.args?.[2] ?? 0;
-          const timestampSecondsRaw = typeof timestampValue === 'bigint'
-            ? Number(timestampValue)
-            : Number(timestampValue || 0);
-          const fallbackSeconds = Number.isFinite(timestampSecondsRaw) && timestampSecondsRaw > 0
-            ? timestampSecondsRaw
-            : Math.floor(Date.now() / 1000);
+          const timestampSecondsRaw =
+            typeof timestampValue === "bigint"
+              ? Number(timestampValue)
+              : Number(timestampValue || 0);
+          const fallbackSeconds =
+            Number.isFinite(timestampSecondsRaw) && timestampSecondsRaw > 0
+              ? timestampSecondsRaw
+              : Math.floor(Date.now() / 1000);
 
           let handleSummary = null;
           if (handleSupport) {
@@ -450,37 +517,45 @@
 
           const fallbackClaim = {
             address,
-            name: shortenAddress(address) || 'Claimed Address',
-            avatar: '👤',
+            name: shortenAddress(address) || "Claimed Address",
+            avatar: "👤",
             claimTime: fallbackSeconds * 1000,
             isActive: true,
-            handle: handleSummary
+            handle: handleSummary,
           };
-          console.debug('[Explorer] Fallback claim data prepared:', fallbackClaim);
+          console.debug(
+            "[Explorer] Fallback claim data prepared:",
+            fallbackClaim,
+          );
 
           try {
             const claim = await targetContract.getClaim(address);
             const parsedClaim = parseClaimData(claim);
 
             if (!parsedClaim) {
-              console.warn('[Explorer] Parsed claim missing, using fallback.', { address });
+              console.warn("[Explorer] Parsed claim missing, using fallback.", {
+                address,
+              });
               return fallbackClaim;
             }
 
             if (parsedClaim.isActive === false) {
-              console.debug('[Explorer] Claim inactive, skipping:', { address });
+              console.debug("[Explorer] Claim inactive, skipping:", {
+                address,
+              });
               return null;
             }
 
-            const claimTimestamp = typeof parsedClaim.claimTime?.toNumber === 'function'
-              ? parsedClaim.claimTime.toNumber()
-              : Number(parsedClaim.claimTime || fallbackSeconds || 0);
+            const claimTimestamp =
+              typeof parsedClaim.claimTime?.toNumber === "function"
+                ? parsedClaim.claimTime.toNumber()
+                : Number(parsedClaim.claimTime || fallbackSeconds || 0);
 
-            console.debug('[Explorer] Parsed claim info:', {
+            console.debug("[Explorer] Parsed claim info:", {
               address,
               name: parsedClaim.name,
               isActive: parsedClaim.isActive,
-              claimTime
+              claimTime,
             });
             return {
               address,
@@ -489,27 +564,32 @@
               claimTime: claimTimestamp * 1000,
               isActive: true,
               handle: handleSummary,
-              network: networkLabel || fallbackClaim.network
+              network: networkLabel || fallbackClaim.network,
             };
           } catch (error) {
-            console.warn('Error fetching claim metadata:', error);
+            console.warn("Error fetching claim metadata:", error);
             return fallbackClaim;
           }
-        })
+        }),
       );
-      console.debug('[Explorer] Recent claims after parsing:', claimsData.length);
+      console.debug(
+        "[Explorer] Recent claims after parsing:",
+        claimsData.length,
+      );
 
       if (targetContract !== contract) {
         return;
       }
 
       if (claimsData.length === 0) {
-        console.warn('[Explorer] Recent claims list empty after parsing.');
+        console.warn("[Explorer] Recent claims list empty after parsing.");
       }
-      recentClaims = claimsData.filter(claim => claim && claim.isActive !== false);
+      recentClaims = claimsData.filter(
+        (claim) => claim && claim.isActive !== false,
+      );
     } catch (error) {
       if (targetContract === contract) {
-        console.error('Error loading recent claims:', error);
+        console.error("Error loading recent claims:", error);
         recentClaims = [];
       }
     }
@@ -526,37 +606,46 @@
     try {
       // If provider is available and input looks like ENS name, try to resolve it
       if (provider && isENSName(searchAddress)) {
-        const { address, ensName } = await resolveAddressOrENS(searchAddress, provider);
-        
+        const { address, ensName } = await resolveAddressOrENS(
+          searchAddress,
+          provider,
+        );
+
         if (address) {
-          dispatch('viewAddress', { view: 'address', address, ensName });
+          dispatch("viewAddress", { view: "address", address, ensName });
         } else {
-          searchError = 'ENS name not found or could not be resolved';
+          searchError = "ENS name not found or could not be resolved";
         }
       } else {
         // Check if it's a valid address format (basic validation)
         if (/^0x[a-fA-F0-9]{40}$/.test(searchAddress)) {
           // Normalize the address to proper checksum
-          const normalizedAddress = ethers.getAddress(searchAddress.toLowerCase());
-          dispatch('viewAddress', { view: 'address', address: normalizedAddress });
+          const normalizedAddress = ethers.getAddress(
+            searchAddress.toLowerCase(),
+          );
+          dispatch("viewAddress", {
+            view: "address",
+            address: normalizedAddress,
+          });
         } else {
-          searchError = 'Invalid address format. Please enter a valid Ethereum address or ENS name.';
+          searchError =
+            "Invalid address format. Please enter a valid Ethereum address or ENS name.";
         }
       }
     } catch (error) {
-      console.error('Search error:', error);
-      searchError = 'Error searching for address';
+      console.error("Search error:", error);
+      searchError = "Error searching for address";
     } finally {
       loading = false;
     }
   }
 
   function viewAddress(address) {
-    dispatch('viewAddress', { view: 'address', address });
+    dispatch("viewAddress", { view: "address", address });
   }
 
   function openInfoModal(id) {
-    const target = infoHighlights.find(item => item.id === id);
+    const target = infoHighlights.find((item) => item.id === id);
     if (target) {
       activeInfoModal = target;
     }
@@ -570,15 +659,15 @@
 
   function shortenAddress(addr) {
     if (!addr) {
-      return '';
+      return "";
     }
     return `${addr.substring(0, 10)}...${addr.substring(addr.length - 8)}`;
   }
 
   function timeAgo(timestamp) {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
-    
-    if (seconds < 60) return 'just now';
+
+    if (seconds < 60) return "just now";
     if (seconds < 3600) return `${Math.floor(seconds / 60)} minutes ago`;
     if (seconds < 86400) return `${Math.floor(seconds / 3600)} hours ago`;
     return `${Math.floor(seconds / 86400)} days ago`;
@@ -590,40 +679,42 @@
       error?.error?.message ||
       error?.info?.error?.message ||
       error?.message ||
-      ''
-    ).toString().toLowerCase();
+      ""
+    )
+      .toString()
+      .toLowerCase();
 
     return (
       code === RATE_LIMIT_CODE ||
-      message.includes('rate limit') ||
-      message.includes('limit exceeded')
+      message.includes("rate limit") ||
+      message.includes("limit exceeded")
     );
   }
 
   function createRateLimitError(originalError) {
-    const error = new Error('RPC rate limit reached while fetching logs');
+    const error = new Error("RPC rate limit reached while fetching logs");
     error.isRateLimit = true;
     error.originalError = originalError;
     return error;
   }
 
   function delay(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   function normalizeNumericValue(value) {
     if (value === null || value === undefined) return null;
-    if (typeof value === 'number') {
+    if (typeof value === "number") {
       return Number.isFinite(value) ? value : null;
     }
-    if (typeof value === 'bigint') {
+    if (typeof value === "bigint") {
       return Number(value);
     }
-    if (typeof value?.toNumber === 'function') {
+    if (typeof value?.toNumber === "function") {
       try {
         return value.toNumber();
       } catch (error) {
-        console.warn('Failed to convert numeric value:', error);
+        console.warn("Failed to convert numeric value:", error);
       }
     }
     const parsed = Number(value);
@@ -635,9 +726,13 @@
       return null;
     }
 
-    const candidateMethods = ['getTotalClaims', 'getClaimedAddressesCount', 'totalActiveClaims'];
+    const candidateMethods = [
+      "getTotalClaims",
+      "getClaimedAddressesCount",
+      "totalActiveClaims",
+    ];
     for (const method of candidateMethods) {
-      if (typeof targetContract[method] === 'function') {
+      if (typeof targetContract[method] === "function") {
         try {
           const result = await targetContract[method]();
           const numeric = normalizeNumericValue(result);
@@ -652,28 +747,43 @@
     return null;
   }
 
-  async function tryFetchClaimedAddressesFromContract(targetContract, offset, limit) {
+  async function tryFetchClaimedAddressesFromContract(
+    targetContract,
+    offset,
+    limit,
+  ) {
     if (!targetContract || limit === 0) {
       return null;
     }
 
-    if (typeof targetContract.getClaimedAddressesPaginated === 'function') {
+    if (typeof targetContract.getClaimedAddressesPaginated === "function") {
       try {
-        const response = await targetContract.getClaimedAddressesPaginated(offset, limit);
-        const addresses = Array.isArray(response?.[0]) ? response[0] : (response?.addresses || []);
+        const response = await targetContract.getClaimedAddressesPaginated(
+          offset,
+          limit,
+        );
+        const addresses = Array.isArray(response?.[0])
+          ? response[0]
+          : response?.addresses || [];
         const total = normalizeNumericValue(response?.[1] ?? response?.total);
         return { addresses, total };
       } catch (error) {
-        console.warn('[Explorer] getClaimedAddressesPaginated call failed:', error);
+        console.warn(
+          "[Explorer] getClaimedAddressesPaginated call failed:",
+          error,
+        );
       }
     }
 
-    if (typeof targetContract.getClaimedAddresses === 'function') {
+    if (typeof targetContract.getClaimedAddresses === "function") {
       try {
-        const addresses = await targetContract.getClaimedAddresses(offset, limit);
+        const addresses = await targetContract.getClaimedAddresses(
+          offset,
+          limit,
+        );
         return { addresses: addresses || [], total: null };
       } catch (error) {
-        console.warn('[Explorer] getClaimedAddresses call failed:', error);
+        console.warn("[Explorer] getClaimedAddresses call failed:", error);
       }
     }
 
@@ -690,7 +800,11 @@
     if (desiredRecentCount > 0) {
       const limit = desiredRecentCount;
       const offset = totalClaims > limit ? totalClaims - limit : 0;
-      const addressResult = await tryFetchClaimedAddressesFromContract(targetContract, offset, limit);
+      const addressResult = await tryFetchClaimedAddressesFromContract(
+        targetContract,
+        offset,
+        limit,
+      );
       if (addressResult?.addresses) {
         recentAddresses = addressResult.addresses.filter(Boolean);
       }
@@ -698,7 +812,7 @@
 
     return {
       totalClaims,
-      recentAddresses
+      recentAddresses,
     };
   }
 
@@ -709,10 +823,10 @@
 
     const fallbackClaim = {
       address,
-      name: shortenAddress(address) || 'Claimed Address',
-      avatar: '👤',
+      name: shortenAddress(address) || "Claimed Address",
+      avatar: "👤",
       claimTime: Date.now(),
-      isActive: true
+      isActive: true,
     };
 
     try {
@@ -723,17 +837,19 @@
         return null;
       }
 
-      const claimTimestampSeconds = normalizeNumericValue(parsedClaim.claimTime) ?? Math.floor(Date.now() / 1000);
+      const claimTimestampSeconds =
+        normalizeNumericValue(parsedClaim.claimTime) ??
+        Math.floor(Date.now() / 1000);
 
       return {
         address,
         name: parsedClaim.name || fallbackClaim.name,
         avatar: parsedClaim.avatar || fallbackClaim.avatar,
         claimTime: claimTimestampSeconds * 1000,
-        isActive: true
+        isActive: true,
       };
     } catch (error) {
-      console.warn('Error fetching claim via view:', error);
+      console.warn("Error fetching claim via view:", error);
       return fallbackClaim;
     }
   }
@@ -746,7 +862,9 @@
       return false;
     }
 
-    const cards = await Promise.all(addresses.map((addr) => fetchClaimCardFromContract(targetContract, addr)));
+    const cards = await Promise.all(
+      addresses.map((addr) => fetchClaimCardFromContract(targetContract, addr)),
+    );
     const filtered = cards.filter(Boolean);
 
     if (targetContract === contract) {
@@ -756,29 +874,36 @@
     return filtered.length > 0;
   }
 
-  async function fetchEventsInChunks(targetContract, filter, {
-    lookback = 4000,
-    chunkSize = 500,
-    maxEvents = Infinity,
-    endBlock = null,
-    latestBlockHint = null
-  } = {}) {
+  async function fetchEventsInChunks(
+    targetContract,
+    filter,
+    {
+      lookback = 4000,
+      chunkSize = 500,
+      maxEvents = Infinity,
+      endBlock = null,
+      latestBlockHint = null,
+    } = {},
+  ) {
     const provider = getContractProvider(targetContract);
-    if (!provider || typeof provider.getBlockNumber !== 'function') {
+    if (!provider || typeof provider.getBlockNumber !== "function") {
       return [];
     }
 
     let latestBlock;
     try {
-      if (typeof endBlock === 'number') {
+      if (typeof endBlock === "number") {
         latestBlock = endBlock;
-      } else if (typeof latestBlockHint === 'number') {
+      } else if (typeof latestBlockHint === "number") {
         latestBlock = latestBlockHint;
       } else {
         latestBlock = Number(await provider.getBlockNumber());
       }
     } catch (error) {
-      console.warn('Could not determine latest block for explorer data:', error);
+      console.warn(
+        "Could not determine latest block for explorer data:",
+        error,
+      );
       return [];
     }
 
@@ -797,7 +922,11 @@
       const fromBlock = Math.max(currentEnd - currentChunkSize + 1, minBlock);
 
       try {
-        const events = await targetContract.queryFilter(filter, fromBlock, currentEnd);
+        const events = await targetContract.queryFilter(
+          filter,
+          fromBlock,
+          currentEnd,
+        );
         collected.push(...events);
         currentEnd = fromBlock - 1;
         consecutiveRateLimits = 0;
@@ -805,8 +934,13 @@
       } catch (error) {
         if (isRateLimitError(error)) {
           consecutiveRateLimits += 1;
-          if (consecutiveRateLimits > maxRateLimitRetries || currentChunkSize <= 50) {
-            console.warn('Hit rate limit repeatedly, switching to block-by-block fetch.');
+          if (
+            consecutiveRateLimits > maxRateLimitRetries ||
+            currentChunkSize <= 50
+          ) {
+            console.warn(
+              "Hit rate limit repeatedly, switching to block-by-block fetch.",
+            );
             throw createRateLimitError(error);
           }
           currentChunkSize = Math.max(Math.floor(currentChunkSize / 2), 50);
@@ -814,7 +948,7 @@
           continue;
         }
 
-        console.warn('Chunked log fetch failed, adjusting range:', error);
+        console.warn("Chunked log fetch failed, adjusting range:", error);
         if (currentChunkSize <= 50) {
           throw error;
         }
@@ -826,26 +960,33 @@
     return collected.slice(-maxEvents);
   }
 
-  async function fetchEventsByBlock(targetContract, filter, {
-    lookbackBlocks = 5000,
-    maxEvents = 300,
-    interBlockDelay = 75,
-    endBlock = null
-  } = {}) {
+  async function fetchEventsByBlock(
+    targetContract,
+    filter,
+    {
+      lookbackBlocks = 5000,
+      maxEvents = 300,
+      interBlockDelay = 75,
+      endBlock = null,
+    } = {},
+  ) {
     const provider = getContractProvider(targetContract);
-    if (!provider || typeof provider.getBlockNumber !== 'function') {
+    if (!provider || typeof provider.getBlockNumber !== "function") {
       return [];
     }
 
     let latestBlock;
     try {
-      if (typeof endBlock === 'number') {
+      if (typeof endBlock === "number") {
         latestBlock = endBlock;
       } else {
         latestBlock = Number(await provider.getBlockNumber());
       }
     } catch (error) {
-      console.warn('Failed to determine latest block for block-by-block fetch:', error);
+      console.warn(
+        "Failed to determine latest block for block-by-block fetch:",
+        error,
+      );
       return [];
     }
 
@@ -855,17 +996,21 @@
 
     const address = filter.address || targetContract.target;
     const topics = filter.topics;
-    console.debug('[Explorer] Block-by-block fetch start', {
+    console.debug("[Explorer] Block-by-block fetch start", {
       target: targetContract.target,
       latestBlock,
       lookbackBlocks,
-      maxEvents
+      maxEvents,
     });
 
     const events = [];
     const blocksToScan = Math.min(lookbackBlocks, latestBlock + 1);
 
-    for (let offset = 0; offset < blocksToScan && events.length < maxEvents; offset++) {
+    for (
+      let offset = 0;
+      offset < blocksToScan && events.length < maxEvents;
+      offset++
+    ) {
       const blockNumber = latestBlock - offset;
       if (blockNumber < 0) break;
 
@@ -873,7 +1018,7 @@
       try {
         block = await provider.getBlock(blockNumber);
       } catch (error) {
-        console.warn('Failed to fetch block metadata:', error);
+        console.warn("Failed to fetch block metadata:", error);
         continue;
       }
 
@@ -885,10 +1030,15 @@
         const logs = await provider.getLogs({
           address,
           topics,
-          blockHash: block.hash
+          blockHash: block.hash,
         });
         if (logs.length > 0) {
-          console.debug('[Explorer] Logs found in block', blockNumber, 'count:', logs.length);
+          console.debug(
+            "[Explorer] Logs found in block",
+            blockNumber,
+            "count:",
+            logs.length,
+          );
         }
 
         for (const log of logs) {
@@ -899,15 +1049,15 @@
               args: parsed.args,
               eventName: parsed.name,
               blockNumber: log.blockNumber,
-              transactionHash: log.transactionHash
+              transactionHash: log.transactionHash,
             });
           } catch (parseError) {
-            console.warn('Failed to parse log entry:', parseError);
+            console.warn("Failed to parse log entry:", parseError);
           }
         }
       } catch (error) {
         if (!isRateLimitError(error)) {
-          console.warn('Block-by-block log fetch failed:', error);
+          console.warn("Block-by-block log fetch failed:", error);
         } else {
           await delay(400);
         }
@@ -922,28 +1072,35 @@
       }
     }
 
-    console.debug('[Explorer] Block-by-block fetch complete', {
-      scannedBlocks: Math.min(blocksToScan, maxEvents ? blocksToScan : blocksToScan),
-      eventsFound: events.length
+    console.debug("[Explorer] Block-by-block fetch complete", {
+      scannedBlocks: Math.min(
+        blocksToScan,
+        maxEvents ? blocksToScan : blocksToScan,
+      ),
+      eventsFound: events.length,
     });
     events.sort((a, b) => (a.blockNumber || 0) - (b.blockNumber || 0));
     return events.slice(-maxEvents);
   }
 
-  async function fetchEventsWithAdaptiveLookback(targetContract, filter, {
-    initialLookback = 4000,
-    maxLookback = 64000,
-    chunkSize = 250,
-    maxEvents = 500,
-    minEvents = 1,
-    historyLimitBlocks = 400000
-  } = {}) {
+  async function fetchEventsWithAdaptiveLookback(
+    targetContract,
+    filter,
+    {
+      initialLookback = 4000,
+      maxLookback = 64000,
+      chunkSize = 250,
+      maxEvents = 500,
+      minEvents = 1,
+      historyLimitBlocks = 400000,
+    } = {},
+  ) {
     if (!targetContract || !filter) {
       return [];
     }
 
     const provider = getContractProvider(targetContract);
-    if (!provider || typeof provider.getBlockNumber !== 'function') {
+    if (!provider || typeof provider.getBlockNumber !== "function") {
       return [];
     }
 
@@ -951,7 +1108,7 @@
     try {
       latestBlock = Number(await provider.getBlockNumber());
     } catch (error) {
-      console.warn('Unable to resolve latest block for explorer scan:', error);
+      console.warn("Unable to resolve latest block for explorer scan:", error);
       return [];
     }
 
@@ -960,15 +1117,15 @@
     let endCursor = latestBlock;
     let remainingHistory = Math.min(historyLimitBlocks, latestBlock + 1);
 
-    console.debug('[Explorer] Starting adaptive log scan', {
+    console.debug("[Explorer] Starting adaptive log scan", {
       target: targetContract.target,
       latestBlock,
-      historyLimitBlocks
+      historyLimitBlocks,
     });
 
     while (remainingHistory > 0 && endCursor >= 0) {
       const windowSize = Math.min(lookback, remainingHistory, endCursor + 1);
-      console.debug('[Explorer] Query window', { endCursor, windowSize });
+      console.debug("[Explorer] Query window", { endCursor, windowSize });
 
       try {
         events = await fetchEventsInChunks(targetContract, filter, {
@@ -976,9 +1133,9 @@
           chunkSize,
           maxEvents,
           endBlock: endCursor,
-          latestBlockHint: endCursor
+          latestBlockHint: endCursor,
         });
-        console.debug('[Explorer] Window events', { count: events.length });
+        console.debug("[Explorer] Window events", { count: events.length });
 
         if (events.length >= minEvents) {
           break;
@@ -993,11 +1150,13 @@
         lookback = Math.min(maxLookback, lookback * 2);
       } catch (error) {
         if (error?.isRateLimit) {
-          console.warn('Switching to per-block log fetching due to repeated rate limits.');
+          console.warn(
+            "Switching to per-block log fetching due to repeated rate limits.",
+          );
           events = await fetchEventsByBlock(targetContract, filter, {
             lookbackBlocks: remainingHistory,
             maxEvents,
-            endBlock: endCursor
+            endBlock: endCursor,
           });
           break;
         }
@@ -1005,7 +1164,9 @@
       }
     }
 
-    console.debug('[Explorer] Adaptive scan completed', { totalEvents: events.length });
+    console.debug("[Explorer] Adaptive scan completed", {
+      totalEvents: events.length,
+    });
     return events;
   }
 </script>
@@ -1016,7 +1177,9 @@
       <Icon name="globe" size="2.5rem" />
       <span>Blockchain Identity Explorer</span>
     </h2>
-    <p>Discover and explore claimed addresses on the decentralized human network</p>
+    <p>
+      Discover and explore claimed addresses on the decentralized human network
+    </p>
   </div>
 
   <div class="search-section">
@@ -1025,12 +1188,12 @@
         type="text"
         placeholder="Search by address or ENS name (0x... or name.eth)"
         bind:value={searchAddress}
-        on:keypress={(e) => e.key === 'Enter' && handleSearch()}
+        on:keypress={(e) => e.key === "Enter" && handleSearch()}
         disabled={loading}
       />
       <button class="btn-search" on:click={handleSearch} disabled={loading}>
         <Icon name="search" size="1.125rem" />
-        {loading ? 'Searching...' : 'Search'}
+        {loading ? "Searching..." : "Search"}
       </button>
     </div>
     {#if searchError}
@@ -1040,15 +1203,19 @@
 
   <div class="stats">
     <div class="stat-card">
-      <div class="stat-value">{loadingStats ? '...' : stats.claimedAddresses}</div>
+      <div class="stat-value">
+        {loadingStats ? "..." : stats.claimedAddresses}
+      </div>
       <div class="stat-label">Claimed Addresses</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{loadingStats ? '...' : stats.activeUsers}</div>
+      <div class="stat-value">{loadingStats ? "..." : stats.activeUsers}</div>
       <div class="stat-label">Active Users</div>
     </div>
     <div class="stat-card">
-      <div class="stat-value">{loadingStats ? '...' : stats.contractClaims}</div>
+      <div class="stat-value">
+        {loadingStats ? "..." : stats.contractClaims}
+      </div>
       <div class="stat-label">Contract Claims</div>
     </div>
   </div>
@@ -1059,15 +1226,23 @@
     {:else if loadingStats}
       <span>Syncing public chain data...</span>
     {:else}
-      <span>No public network data detected. Connect a wallet to load live stats.</span>
+      <span
+        >No public network data detected. Connect a wallet to load live stats.</span
+      >
     {/if}
   </div>
 
   <div class="chain-stats">
     <h3>Network Footprint</h3>
     <div class="chain-summary-row">
-      <span>{totalNetworks} network{totalNetworks === 1 ? "" : "s"} connected</span>
-      <span>{handleReadyNetworks} handle registry{handleReadyNetworks === 1 ? "" : "ies"} active</span>
+      <span
+        >{totalNetworks} network{totalNetworks === 1 ? "" : "s"} connected</span
+      >
+      <span
+        >{handleReadyNetworks} handle registry{handleReadyNetworks === 1
+          ? ""
+          : "ies"} active</span
+      >
     </div>
     {#if loadingChainStats}
       <p class="muted">Loading chain summaries...</p>
@@ -1078,8 +1253,19 @@
         {#each chainStats as chain}
           <div class="chain-card">
             <div class="chain-chip">{chain.name}</div>
-            <div class="chain-metric"><span>Claims</span><strong>{chain.claimedCount}</strong></div>
-            <div class="chain-metric handle" class:available={chain.handleRegistryAvailable}><span>Word Handles</span><strong>{chain.handleRegistryAvailable ? 'Available' : 'Not Configured'}</strong></div>
+            <div class="chain-metric">
+              <span>Claims</span><strong>{chain.claimedCount}</strong>
+            </div>
+            <div
+              class="chain-metric handle"
+              class:available={chain.handleRegistryAvailable}
+            >
+              <span>Word Handles</span><strong
+                >{chain.handleRegistryAvailable
+                  ? "Available"
+                  : "Not Configured"}</strong
+              >
+            </div>
           </div>
         {/each}
       </div>
@@ -1092,16 +1278,18 @@
       <div class="claims-grid">
         {#each recentClaims as claim}
           <div class="claim-card" on:click={() => viewAddress(claim.address)}>
-            <div class="claim-chain-chip">{claim.network || contractNetworkName || 'Unknown Network'}</div>
-          <div class="claim-avatar">{claim.avatar}</div>
-              <div class="claim-info">
-                <div class="claim-name">{claim.name}</div>
-                {#if claim.handle?.phrase}
-                  <div class="claim-handle">{claim.handle.phrase}</div>
-                {/if}
-                <div class="claim-address">{shortenAddress(claim.address)}</div>
-                <div class="claim-time">{timeAgo(claim.claimTime)}</div>
-              </div>
+            <div class="claim-chain-chip">
+              {claim.network || contractNetworkName || "Unknown Network"}
+            </div>
+            <div class="claim-avatar">{claim.avatar}</div>
+            <div class="claim-info">
+              <div class="claim-name">{claim.name}</div>
+              {#if claim.handle?.phrase}
+                <div class="claim-handle">{claim.handle.phrase}</div>
+              {/if}
+              <div class="claim-address">{shortenAddress(claim.address)}</div>
+              <div class="claim-time">{timeAgo(claim.claimTime)}</div>
+            </div>
             <div class="claim-badge">
               <Icon name="check" size="0.875rem" />
               Claimed
@@ -1136,7 +1324,12 @@
   </div>
 
   {#if activeInfoModal}
-    <div class="info-modal-backdrop" role="dialog" aria-modal="true" aria-label={activeInfoModal.title}>
+    <div
+      class="info-modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-label={activeInfoModal.title}
+    >
       <div class="info-modal">
         <div class="info-modal-header">
           <div class="info-modal-title">
@@ -1146,7 +1339,11 @@
               <p>{activeInfoModal.summary}</p>
             </div>
           </div>
-          <button class="info-modal-close" on:click={closeInfoModal} aria-label="Close">
+          <button
+            class="info-modal-close"
+            on:click={closeInfoModal}
+            aria-label="Close"
+          >
             ✕
           </button>
         </div>
@@ -1356,7 +1553,11 @@
   .stat-value {
     font-size: 2.5rem;
     font-weight: 800;
-    background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+    background: linear-gradient(
+      135deg,
+      var(--accent-primary),
+      var(--accent-secondary)
+    );
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1493,7 +1694,8 @@
   }
 
   .claim-address {
-    font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Courier New', monospace;
+    font-family: "SF Mono", "Monaco", "Inconsolata", "Fira Code", "Courier New",
+      monospace;
     font-size: 0.8125rem;
     color: #64748b;
     margin-bottom: 0.375rem;
@@ -1789,5 +1991,4 @@
     background: rgba(15, 23, 42, 0.5);
     color: #cbd5e1;
   }
-
 </style>

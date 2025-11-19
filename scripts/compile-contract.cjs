@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 const path = require('path');
-const { compileContract } = require('./utils/contractCompiler');
+const { compileContract } = require('./utils/contractCompiler.cjs');
 
 const rootDir = path.resolve(__dirname, '..');
 
