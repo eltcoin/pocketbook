@@ -1,6 +1,7 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import { ethers } from 'ethers';
+  import { get } from 'svelte/store';
   import { multiChainStore } from '../stores/multichain';
   import { themeStore } from '../stores/theme';
   import { lookupENSName } from '../utils/ens';
@@ -10,6 +11,7 @@
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
   import Reputation from './Reputation.svelte';
+  import BlockchainExplorer from './BlockchainExplorer.svelte';
   import Icon from './Icon.svelte';
 
   export let address;
@@ -45,6 +47,8 @@
   let handleRequestId = 0;
   let handleWordlist = [];
   let handleWordlistPromise = null;
+  // Initialize chainId from store's current value
+  let chainId = get(multiChainStore).primaryChainId || 1;
 
   themeStore.subscribe(value => {
     darkMode = value.darkMode;
@@ -61,6 +65,7 @@
     const nativeCurrency = chainEntry?.networkConfig?.nativeCurrency;
     nativeCurrencySymbol = nativeCurrency?.symbol || 'ETH';
     nativeCurrencyDecimals = nativeCurrency?.decimals ?? 18;
+    chainId = value.primaryChainId || 1;
   });
 
   let balanceTrigger = null;
@@ -610,6 +615,8 @@
 
       <MultiChainView {address} />
 
+      <BlockchainExplorer {provider} {address} {chainId} />
+
       <div class="verification-box">
         <h3>
           <Icon name="shield-alt" size="1.5rem" />
@@ -777,6 +784,8 @@
       </div>
 
       <MultiChainView {address} />
+
+      <BlockchainExplorer {provider} {address} {chainId} />
 
       <div class="what-is-claiming">
         <h3>What is Address Claiming?</h3>
