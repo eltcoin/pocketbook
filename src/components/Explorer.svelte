@@ -11,6 +11,7 @@
     decodeHandle,
     formatHandle,
   } from "../utils/wordhandles";
+  import { getNetworkByChainId } from "../config/networks";
   import Icon from "./Icon.svelte";
 
   const dispatch = createEventDispatcher();
@@ -515,6 +516,10 @@
             handleSummary = await fetchWordHandle(handleChainId, address);
           }
 
+          const networkLabel = handleChainId
+            ? getNetworkByChainId(handleChainId)?.name
+            : null;
+
           const fallbackClaim = {
             address,
             name: shortenAddress(address) || "Claimed Address",
@@ -522,6 +527,7 @@
             claimTime: fallbackSeconds * 1000,
             isActive: true,
             handle: handleSummary,
+            network: networkLabel,
           };
           console.debug(
             "[Explorer] Fallback claim data prepared:",

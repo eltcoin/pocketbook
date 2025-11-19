@@ -78,7 +78,6 @@ function createMultiChainStore() {
     "function getAttestationsReceived(address _subject) public view returns (address[] memory)",
     "function getAttestationSignature(address _attester, address _subject) public view returns (bytes memory)",
     "event AddressClaimed(address indexed claimedAddress, address indexed claimant, uint256 timestamp)",
-    "function getTotalClaims() public view returns (uint256)",
     "function getClaimedAddresses(uint256 start, uint256 count) public view returns (address[] memory)",
     "function getClaimedAddressesPaginated(uint256 offset, uint256 limit) public view returns (address[] memory)",
     "event MetadataUpdated(address indexed claimedAddress, uint256 timestamp)",
