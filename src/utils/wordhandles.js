@@ -89,7 +89,7 @@ export function decodeHandle(encoded) {
   if (!encoded || encoded.length === 0) {
     return [];
   }
-  const bytes = typeof encoded === 'string' ? ethers.getBytes(encoded) : ethers.getBytes(encoded);
+  const bytes = ethers.getBytes(encoded);
   const L = bytes[0];
   if (bytes.length !== 1 + L * 2) {
     throw new Error('Invalid handle encoding');
