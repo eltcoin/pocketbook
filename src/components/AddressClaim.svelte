@@ -4,6 +4,7 @@
   import { multiChainStore } from "../stores/multichain";
   import { themeStore } from "../stores/theme";
   import { lookupENSName } from "../utils/ens";
+  import { goBack as navigateBack } from "../utils/router";
   import {
     loadWordlist,
     encodeHandle,
@@ -491,7 +492,8 @@
   }
 
   function goBack() {
-    dispatch("viewChange", { view: "explorer" });
+    // Use browser history for proper back button behavior
+    navigateBack();
   }
 </script>
 

@@ -12,7 +12,10 @@ export const location = writable({
   search: window.location.search
 });
 
-// Update location when browser navigation occurs
+// Initialize on load
+updateLocation();
+
+// Update location when browser navigation occurs (back/forward buttons)
 window.addEventListener('popstate', () => {
   updateLocation();
 });
@@ -44,6 +47,19 @@ function extractParams(path) {
 export function navigate(path) {
   window.history.pushState({}, '', path);
   updateLocation();
+}
+
+/**
+ * Navigate back in history
+ */
+export function goBack() {
+  // Check if there's history to go back to within the app
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    // Fallback to home/explorer if no history
+    navigate('/');
+  }
 }
 
 /**
