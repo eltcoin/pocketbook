@@ -10,6 +10,7 @@
   import AdminPanel from './components/AdminPanel.svelte';
   import Toast from './components/Toast.svelte';
   import AnimatedBackground from './components/AnimatedBackground.svelte';
+  import LoadingBar from './components/LoadingBar.svelte';
 
   let currentView = 'explorer';
   let selectedAddress = null;
@@ -50,6 +51,7 @@
 </script>
 
 <main class:dark={darkMode}>
+  <LoadingBar />
   <AnimatedBackground />
   <Header on:viewChange={handleViewChange} />
   
