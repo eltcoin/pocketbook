@@ -53,7 +53,13 @@ export function navigate(path) {
  * Navigate back in history
  */
 export function goBack() {
-  window.history.back();
+  // Check if there's history to go back to within the app
+  if (window.history.length > 1) {
+    window.history.back();
+  } else {
+    // Fallback to home/explorer if no history
+    navigate('/');
+  }
 }
 
 /**

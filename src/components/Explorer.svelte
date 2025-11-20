@@ -41,6 +41,7 @@
   let userAddress = null;
   let hasExistingClaim = false;
   let checkingClaim = false;
+  let claimCheckRequestId = 0;
 
   const createEmptyStats = () => ({
     claimedAddresses: 0,
@@ -670,15 +671,20 @@
       return;
     }
 
+    const requestId = ++claimCheckRequestId;
     checkingClaim = true;
     try {
       const isClaimed = await targetContract.isClaimed(targetAddress);
+      if (requestId !== claimCheckRequestId) return; // Stale request
       hasExistingClaim = Boolean(isClaimed);
     } catch (error) {
+      if (requestId !== claimCheckRequestId) return; // Stale request
       console.error("Error checking claim status:", error);
       hasExistingClaim = false;
     } finally {
-      checkingClaim = false;
+      if (requestId === claimCheckRequestId) {
+        checkingClaim = false;
+      }
     }
   }
 

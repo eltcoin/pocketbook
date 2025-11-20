@@ -29,7 +29,7 @@
     previousChainId = currentChainId;
     
     // Check if any operations are loading
-    loading = value.initializing || false;
+    loading = (value.initializedChains?.length === 0 && value.connected === false);
   });
 </script>
 

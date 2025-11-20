@@ -1329,8 +1329,8 @@
     color: #94a3b8;
   }
 
-  /* Explorer Tabs Styles */
-  .explorer-tabs {
+  /* Address Overview Styles */
+  .address-overview {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
     border-radius: 12px;
@@ -1339,56 +1339,12 @@
     margin-top: 2rem;
   }
 
-  .address-view.dark .explorer-tabs {
+  .address-view.dark .address-overview {
     background: rgba(30, 41, 59, 0.8);
     border: 1px solid #334155;
   }
 
-  .tabs-header {
-    display: flex;
-    gap: 0;
-    border-bottom: 1px solid #e2e8f0;
-    background: #f8fafc;
-  }
-
-  .address-view.dark .tabs-header {
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
-  }
-
-  .tab-btn {
-    flex: 1;
-    padding: 1rem 1.5rem;
-    background: transparent;
-    border: none;
-    color: #64748b;
-    font-size: 0.9375rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    border-bottom: 3px solid transparent;
-  }
-
-  .address-view.dark .tab-btn {
-    color: #94a3b8;
-  }
-
-  .tab-btn:hover {
-    background: rgba(59, 130, 246, 0.05);
-    color: var(--accent-primary);
-  }
-
-  .tab-btn.active {
-    color: var(--accent-primary);
-    border-bottom-color: var(--accent-primary);
-    background: rgba(59, 130, 246, 0.05);
-  }
-
-  .tabs-content {
+  .tab-panel {
     padding: 2rem;
   }
 
