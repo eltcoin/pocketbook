@@ -36,9 +36,6 @@
     followers: [],
     friends: []
   };
-  let activeTab = 'overview'; // overview, transactions, tokens, contracts
-  let transactions = [];
-  let loadingTransactions = false;
   let balance = '0';
   let loadingBalance = false;
   let handleInfo = null;
@@ -266,65 +263,6 @@
     }
   }
 
-  async function loadTransactions() {
-    if (!provider || !address || loadingTransactions) return;
-    
-    loadingTransactions = true;
-    try {
-      // Get recent transactions (last 10 blocks as example)
-      // NOTE: This is a simplified implementation for demo purposes
-      // In production, use an indexer service (The Graph, Etherscan API, Alchemy, etc.)
-      // for better performance and complete transaction history
-      const currentBlock = await provider.getBlockNumber();
-      const txs = [];
-      
-      // This is a simplified version - in production you'd use an indexer
-      for (let i = 0; i < Math.min(5, currentBlock); i++) {
-        const block = await provider.getBlock(currentBlock - i, true);
-        if (block && block.transactions) {
-          for (const txRef of block.transactions) {
-            const fullTx =
-              typeof txRef === 'string'
-                ? await provider.getTransaction(txRef)
-                : txRef;
-            if (!fullTx) continue;
-
-            const fromMatches = fullTx.from?.toLowerCase() === address.toLowerCase();
-            const toMatches = fullTx.to?.toLowerCase() === address.toLowerCase();
-
-            if (fromMatches || toMatches) {
-              txs.push({
-                hash: fullTx.hash,
-                from: fullTx.from,
-                to: fullTx.to || 'Contract Creation',
-                value: formatNativeAmount(fullTx.value),
-                blockNumber: block.number,
-                timestamp: block.timestamp
-              });
-
-              if (txs.length >= 10) break;
-            }
-          }
-        }
-        if (txs.length >= 10) break;
-      }
-      
-      transactions = txs;
-    } catch (error) {
-      console.error('Error loading transactions:', error);
-      transactions = [];
-    } finally {
-      loadingTransactions = false;
-    }
-  }
-
-  function setActiveTab(tab) {
-    activeTab = tab;
-    if (tab === 'transactions' && transactions.length === 0) {
-      loadTransactions();
-    }
-  }
-
   function goBack() {
     dispatch('viewChange', { view: 'explorer' });
   }
@@ -479,131 +417,32 @@
         {/if}
       </div>
 
-      <!-- Explorer Tabs -->
-      <div class="explorer-tabs">
-        <div class="tabs-header">
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'overview'}
-            on:click={() => setActiveTab('overview')}
-          >
-            <Icon name="info-circle" size="1.125rem" />
-            Overview
-          </button>
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'transactions'}
-            on:click={() => setActiveTab('transactions')}
-          >
-            <Icon name="exchange-alt" size="1.125rem" />
-            Transactions
-          </button>
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'tokens'}
-            on:click={() => setActiveTab('tokens')}
-          >
-            <Icon name="coins" size="1.125rem" />
-            Tokens
-          </button>
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'contracts'}
-            on:click={() => setActiveTab('contracts')}
-          >
-            <Icon name="file-contract" size="1.125rem" />
-            Contracts
-          </button>
-        </div>
-
-        <div class="tabs-content">
-          {#if activeTab === 'overview'}
-            <div class="tab-panel">
-              <h3>Account Overview</h3>
-              <div class="overview-grid">
-                <div class="overview-item">
-                  <div class="overview-label">Balance</div>
-                  <div class="overview-value">
-                    {#if loadingBalance}
-                      <span class="loading-dots">...</span>
-                    {:else}
-                      {balance} {nativeCurrencySymbol}
-                    {/if}
-                  </div>
-                </div>
-                <div class="overview-item">
-                  <div class="overview-label">Address</div>
-                  <div class="overview-value mono">{shortenAddress(address)}</div>
-                </div>
-                {#if resolvedENSName}
-                  <div class="overview-item">
-                    <div class="overview-label">ENS Name</div>
-                    <div class="overview-value">{resolvedENSName}</div>
-                  </div>
+      <!-- Address Overview -->
+      <div class="address-overview">
+        <div class="tab-panel">
+          <h3>Account Overview</h3>
+          <div class="overview-grid">
+            <div class="overview-item">
+              <div class="overview-label">Balance</div>
+              <div class="overview-value">
+                {#if loadingBalance}
+                  <span class="loading-dots">...</span>
+                {:else}
+                  {balance} {nativeCurrencySymbol}
                 {/if}
               </div>
             </div>
-          {:else if activeTab === 'transactions'}
-            <div class="tab-panel">
-              <h3>Recent Transactions</h3>
-              {#if loadingTransactions}
-                <div class="loading-state">
-                  <div class="spinner-small"></div>
-                  <p>Loading transactions...</p>
-                </div>
-              {:else if transactions.length > 0}
-                <div class="transactions-list">
-                  {#each transactions as tx}
-                    <div class="transaction-item">
-                      <div class="tx-hash">
-                        <Icon name="exchange-alt" size="1rem" />
-                        <code>{tx.hash.substring(0, 20)}...</code>
-                      </div>
-                      <div class="tx-details">
-                        <div class="tx-row">
-                          <span class="tx-label">From:</span>
-                          <code class="tx-address">{tx.from.substring(0, 15)}...</code>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">To:</span>
-                          <code class="tx-address">{tx.to.substring(0, 15)}...</code>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">Value:</span>
-                          <span class="tx-value">{tx.value} {nativeCurrencySymbol}</span>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">Block:</span>
-                          <span class="tx-block">#{tx.blockNumber}</span>
-                        </div>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              {:else}
-                <div class="empty-state">
-                  <Icon name="inbox" size="2.5rem" />
-                  <p>No recent transactions found</p>
-                </div>
-              {/if}
+            <div class="overview-item">
+              <div class="overview-label">Address</div>
+              <div class="overview-value mono">{shortenAddress(address)}</div>
             </div>
-          {:else if activeTab === 'tokens'}
-            <div class="tab-panel">
-              <h3>Token Holdings</h3>
-              <div class="empty-state">
-                <Icon name="coins" size="2.5rem" />
-                <p>Token tracking coming soon. Connect to view ERC-20 and NFT holdings.</p>
+            {#if resolvedENSName}
+              <div class="overview-item">
+                <div class="overview-label">ENS Name</div>
+                <div class="overview-value">{resolvedENSName}</div>
               </div>
-            </div>
-          {:else if activeTab === 'contracts'}
-            <div class="tab-panel">
-              <h3>Contract Interactions</h3>
-              <div class="empty-state">
-                <Icon name="file-contract" size="2.5rem" />
-                <p>Contract interaction history coming soon.</p>
-              </div>
-            </div>
-          {/if}
+            {/if}
+          </div>
         </div>
       </div>
 
@@ -672,114 +511,32 @@
       </div>
 
       <!-- Explorer Tabs for Unclaimed Address -->
-      <div class="explorer-tabs">
-        <div class="tabs-header">
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'overview'}
-            on:click={() => setActiveTab('overview')}
-          >
-            <Icon name="info-circle" size="1.125rem" />
-            Overview
-          </button>
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'transactions'}
-            on:click={() => setActiveTab('transactions')}
-          >
-            <Icon name="exchange-alt" size="1.125rem" />
-            Transactions
-          </button>
-          <button 
-            class="tab-btn" 
-            class:active={activeTab === 'tokens'}
-            on:click={() => setActiveTab('tokens')}
-          >
-            <Icon name="coins" size="1.125rem" />
-            Tokens
-          </button>
-        </div>
-
-        <div class="tabs-content">
-          {#if activeTab === 'overview'}
-            <div class="tab-panel">
-              <h3>Account Overview</h3>
-              <div class="overview-grid">
-                <div class="overview-item">
-                  <div class="overview-label">Balance</div>
-                  <div class="overview-value">
-                    {#if loadingBalance}
-                      <span class="loading-dots">...</span>
-                    {:else}
-                      {balance} {nativeCurrencySymbol}
-                    {/if}
-                  </div>
-                </div>
-                <div class="overview-item">
-                  <div class="overview-label">Address</div>
-                  <div class="overview-value mono">{shortenAddress(address)}</div>
-                </div>
-                {#if resolvedENSName}
-                  <div class="overview-item">
-                    <div class="overview-label">ENS Name</div>
-                    <div class="overview-value">{resolvedENSName}</div>
-                  </div>
+      <!-- Address Overview -->
+      <div class="address-overview">
+        <div class="tab-panel">
+          <h3>Account Overview</h3>
+          <div class="overview-grid">
+            <div class="overview-item">
+              <div class="overview-label">Balance</div>
+              <div class="overview-value">
+                {#if loadingBalance}
+                  <span class="loading-dots">...</span>
+                {:else}
+                  {balance} {nativeCurrencySymbol}
                 {/if}
               </div>
             </div>
-          {:else if activeTab === 'transactions'}
-            <div class="tab-panel">
-              <h3>Recent Transactions</h3>
-              {#if loadingTransactions}
-                <div class="loading-state">
-                  <div class="spinner-small"></div>
-                  <p>Loading transactions...</p>
-                </div>
-              {:else if transactions.length > 0}
-                <div class="transactions-list">
-                  {#each transactions as tx}
-                    <div class="transaction-item">
-                      <div class="tx-hash">
-                        <Icon name="exchange-alt" size="1rem" />
-                        <code>{tx.hash.substring(0, 20)}...</code>
-                      </div>
-                      <div class="tx-details">
-                        <div class="tx-row">
-                          <span class="tx-label">From:</span>
-                          <code class="tx-address">{tx.from.substring(0, 15)}...</code>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">To:</span>
-                          <code class="tx-address">{tx.to.substring(0, 15)}...</code>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">Value:</span>
-                          <span class="tx-value">{tx.value} {nativeCurrencySymbol}</span>
-                        </div>
-                        <div class="tx-row">
-                          <span class="tx-label">Block:</span>
-                          <span class="tx-block">#{tx.blockNumber}</span>
-                        </div>
-                      </div>
-                    </div>
-                  {/each}
-                </div>
-              {:else}
-                <div class="empty-state">
-                  <Icon name="inbox" size="2.5rem" />
-                  <p>No recent transactions found</p>
-                </div>
-              {/if}
+            <div class="overview-item">
+              <div class="overview-label">Address</div>
+              <div class="overview-value mono">{shortenAddress(address)}</div>
             </div>
-          {:else if activeTab === 'tokens'}
-            <div class="tab-panel">
-              <h3>Token Holdings</h3>
-              <div class="empty-state">
-                <Icon name="coins" size="2.5rem" />
-                <p>Token tracking coming soon. Connect to view ERC-20 and NFT holdings.</p>
+            {#if resolvedENSName}
+              <div class="overview-item">
+                <div class="overview-label">ENS Name</div>
+                <div class="overview-value">{resolvedENSName}</div>
               </div>
-            </div>
-          {/if}
+            {/if}
+          </div>
         </div>
       </div>
 

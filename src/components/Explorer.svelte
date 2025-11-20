@@ -13,6 +13,7 @@
   } from "../utils/wordhandles";
   import { getNetworkByChainId } from "../config/networks";
   import Icon from "./Icon.svelte";
+  import AddressClaim from "./AddressClaim.svelte";
 
   const dispatch = createEventDispatcher();
 
@@ -34,6 +35,12 @@
   let explorerHandleAvailable = false;
   let handleWordlist = [];
   let handleWordlistPromise = null;
+  
+  // Claim integration state
+  let connected = false;
+  let userAddress = null;
+  let hasExistingClaim = false;
+  let checkingClaim = false;
 
   const createEmptyStats = () => ({
     claimedAddresses: 0,
@@ -280,8 +287,10 @@
     provider = value.provider;
   });
 
-  multiChainStore.subscribe((value) => {
+  multiChainStore.subscribe(async (value) => {
     chainsInitialized = (value.initializedChains?.length || 0) > 0;
+    connected = value.connected;
+    userAddress = value.primaryAddress;
 
     const {
       contract: nextContract,
@@ -293,6 +302,14 @@
       nextChainId !== null && nextChainId !== previousChainId;
     previousChainId = nextChainId;
     contractChainId = nextChainId || null;
+
+    // Check if user has existing claim when connected
+    if (connected && userAddress && nextContract && contractChainId) {
+      checkExistingClaim(nextContract, userAddress);
+    } else {
+      hasExistingClaim = false;
+      checkingClaim = false;
+    }
 
     // Refresh data if contract changed OR if chain changed (network switch)
     if (nextContract !== contract || (chainChanged && nextContract)) {
@@ -643,6 +660,25 @@
       searchError = "Error searching for address";
     } finally {
       loading = false;
+    }
+  }
+
+  async function checkExistingClaim(targetContract, targetAddress) {
+    if (!targetContract || !targetAddress) {
+      hasExistingClaim = false;
+      checkingClaim = false;
+      return;
+    }
+
+    checkingClaim = true;
+    try {
+      const isClaimed = await targetContract.isClaimed(targetAddress);
+      hasExistingClaim = Boolean(isClaimed);
+    } catch (error) {
+      console.error("Error checking claim status:", error);
+      hasExistingClaim = false;
+    } finally {
+      checkingClaim = false;
     }
   }
 
@@ -1237,6 +1273,17 @@
       >
     {/if}
   </div>
+
+  {#if connected && !hasExistingClaim && !checkingClaim}
+    <div class="claim-integration-section">
+      <div class="claim-integration-header">
+        <Icon name="id-card" size="2rem" />
+        <h3>Claim Your Address</h3>
+        <p>You're connected! Register your identity on the blockchain to join the network.</p>
+      </div>
+      <AddressClaim on:viewChange />
+    </div>
+  {/if}
 
   <div class="chain-stats">
     <h3>Network Footprint</h3>
@@ -1997,4 +2044,44 @@
     background: rgba(15, 23, 42, 0.5);
     color: #cbd5e1;
   }
+
+  .claim-integration-section {
+    margin: 3rem 0;
+    padding: 2rem;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(139, 92, 246, 0.05));
+    border: 2px solid var(--accent-primary);
+    border-radius: 16px;
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.1);
+  }
+
+  .explorer.dark .claim-integration-section {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(139, 92, 246, 0.1));
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+  }
+
+  .claim-integration-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+
+  .claim-integration-header h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 1rem 0 0.5rem;
+    color: #0f172a;
+  }
+
+  .explorer.dark .claim-integration-header h3 {
+    color: #f1f5f9;
+  }
+
+  .claim-integration-header p {
+    color: #64748b;
+    font-size: 1.1rem;
+  }
+
+  .explorer.dark .claim-integration-header p {
+    color: #94a3b8;
+  }
+
 </style>
