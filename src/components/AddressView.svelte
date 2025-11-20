@@ -7,6 +7,7 @@
   import { lookupENSName } from '../utils/ens';
   import { parseClaimData } from '../utils/claimParser';
   import { loadWordlist, decodeHandle, formatHandle } from '../utils/wordhandles';
+  import { goBack as navigateBack } from '../utils/router';
   import MultiChainView from './MultiChainView.svelte';
   import SocialGraph from './SocialGraph.svelte';
   import SocialGraphExplorer from './SocialGraphExplorer.svelte';
@@ -264,7 +265,8 @@
   }
 
   function goBack() {
-    dispatch('viewChange', { view: 'explorer' });
+    // Use browser history for proper back button behavior
+    navigateBack();
   }
 
   function claimAddress() {
