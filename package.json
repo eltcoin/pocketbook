@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "<div align=\"center\">   <p>     <img src=\"https://pbs.twimg.com/media/DOZbENEXkAA2EMr.png\" width=\"250\" />   </p>   <p>     ✨ Censorship immune, Decentralised Human Network & Identity Platform ✨   </p>   <p>   </p> </div>",
   "main": "index.js",
-  "type": "module",
   "directories": {
     "test": "test"
   },

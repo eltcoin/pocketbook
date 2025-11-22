@@ -138,7 +138,7 @@ echo -e "\n${BLUE}🧪 Step 7: Running E2E test suite...${NC}"
 echo "  This may take several minutes..."
 
 # Run Playwright tests with explicit output paths
-if npx playwright test --reporter=list --reporter=json --reporter=html; then
+if npx playwright test --reporter=list --reporter=json --reporter=html --output=test-results; then
   echo -e "${GREEN}  ✓ Tests completed${NC}"
   TEST_STATUS="passed"
 else
