@@ -522,7 +522,7 @@ A complex and realistic network of **${userNetwork.users.length} test users** wi
       markdown += `## Test Suites
 
 `;
-      this.generateSuiteMarkdown(results.suites, markdown);
+      markdown += this.generateSuiteMarkdown(results.suites);
     }
 
     if (screenshots.length > 0) {
@@ -552,7 +552,8 @@ ${stats.failed > 0 ? `⚠️ **${stats.failed} tests failed** - Review the HTML 
   /**
    * Generate suite markdown recursively
    */
-  generateSuiteMarkdown(suites, markdown, level = 3) {
+  generateSuiteMarkdown(suites, level = 3) {
+    let markdown = '';
     suites.forEach(suite => {
       const heading = '#'.repeat(level);
       markdown += `${heading} ${suite.title || 'Test Suite'}\n\n`;
@@ -566,9 +567,10 @@ ${stats.failed > 0 ? `⚠️ **${stats.failed} tests failed** - Review the HTML 
       }
       
       if (suite.suites && suite.suites.length > 0) {
-        this.generateSuiteMarkdown(suite.suites, markdown, level + 1);
+        markdown += this.generateSuiteMarkdown(suite.suites, level + 1);
       }
     });
+    return markdown;
   }
 
   /**

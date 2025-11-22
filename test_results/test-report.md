@@ -1,6 +1,6 @@
 # 🔖 Pocketbook Test Report
 
-**Generated:** 2025-11-22T04:11:37.423Z
+**Generated:** 2025-11-22T04:15:34.268Z
 
 ## Executive Summary
 
@@ -57,6 +57,22 @@ A complex and realistic network of **8 test users** with varying interaction lev
 - **Unclaimed Addresses:** 1
 
 ## Test Suites
+
+### Feature: User Address Claiming
+
+- ✅ When I connect my wallet and fill out the claim form
+- ✅ Given a user with partial profile information
+- ✅ Given a user with minimal profile information
+- ✅ Then I should see all claimed addresses in the explorer
+
+### Feature: Social Graph and Network Connections
+
+- ✅ Given I am a user with many connections
+- ✅ When I follow another user
+- ✅ Given I want to see my network visually
+- ✅ When I send a friend request to another user
+- ✅ Then I can see overall network health
+- ✅ Given I am a new user with no connections
 
 
 ## Screenshots
