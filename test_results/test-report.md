@@ -1,6 +1,6 @@
 # 🔖 Pocketbook Test Report
 
-**Generated:** 2025-11-22T04:15:34.268Z
+**Generated:** 2025-11-22T04:38:46.437Z
 
 ## Executive Summary
 
@@ -10,12 +10,12 @@ This report contains the results of the comprehensive test suite execution for t
 
 | Metric | Value |
 |--------|-------|
-| **Total Tests** | 10 |
-| **Passed** | ✅ 10 |
+| **Total Tests** | 0 |
+| **Passed** | ✅ 0 |
 | **Failed** | ❌ 0 |
 | **Skipped** | ⏭️ 0 |
 | **Duration** | 0ms |
-| **Test Suites** | 2 |
+| **Test Suites** | 0 |
 | **Screenshots** | 6 |
 
 ## Test Infrastructure
@@ -58,37 +58,21 @@ A complex and realistic network of **8 test users** with varying interaction lev
 
 ## Test Suites
 
-### Feature: User Address Claiming
-
-- ✅ When I connect my wallet and fill out the claim form
-- ✅ Given a user with partial profile information
-- ✅ Given a user with minimal profile information
-- ✅ Then I should see all claimed addresses in the explorer
-
-### Feature: Social Graph and Network Connections
-
-- ✅ Given I am a user with many connections
-- ✅ When I follow another user
-- ✅ Given I want to see my network visually
-- ✅ When I send a friend request to another user
-- ✅ Then I can see overall network health
-- ✅ Given I am a new user with no connections
-
 
 ## Screenshots
 
 Total screenshots captured: **6**
 
-1. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
-2. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
-3. `explorer-statistics-2025-11-07T16-08-09-020Z.png`
-4. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
-5. `explorer-initial-2025-11-07T16-24-38-495Z.png`
+1. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
+2. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
+3. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
+4. `explorer-initial-2025-11-07T16-24-38-495Z.png`
+5. `explorer-statistics-2025-11-07T16-08-09-020Z.png`
 6. `explorer-initial-2025-11-07T16-07-42-925Z.png`
 
 ## Conclusion
 
-The test suite successfully executed with **10 passing tests** out of 10 total tests.
+The test suite successfully executed with **0 passing tests** out of 0 total tests.
 
 ✅ All tests passed successfully!
 
