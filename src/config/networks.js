@@ -142,6 +142,24 @@ export const NETWORKS = {
     contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_MUMBAI || null,
     handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_MUMBAI || null,
     isTestnet: true
+  },
+  
+  // Hardhat Local Network (for testing)
+  31337: {
+    chainId: 31337,
+    chainIdHex: '0x7a69',
+    name: 'Hardhat',
+    shortName: 'Hardhat',
+    rpcUrl: 'http://127.0.0.1:8545',
+    blockExplorer: null,
+    nativeCurrency: {
+      name: 'Ether',
+      symbol: 'ETH',
+      decimals: 18
+    },
+    contractAddress: import.meta.env.VITE_CONTRACT_ADDRESS_HARDHAT || '0x5FbDB2315678afecb367f032d93F642f64180aa3',
+    handleRegistryAddress: import.meta.env.VITE_HANDLE_REGISTRY_ADDRESS_HARDHAT || null,
+    isTestnet: true
   }
 };
 

@@ -1,6 +1,6 @@
 # 🔖 Pocketbook Test Report
 
-**Generated:** 2025-11-22T05:03:43.469Z
+**Generated:** 2025-11-22T07:02:50.349Z
 
 ## Executive Summary
 
@@ -16,7 +16,7 @@ This report contains the results of the comprehensive test suite execution for t
 | **Skipped** | ⏭️ 0 |
 | **Duration** | 0ms |
 | **Test Suites** | 0 |
-| **Screenshots** | 6 |
+| **Screenshots** | 30 |
 
 ## Test Infrastructure
 
@@ -59,14 +59,18 @@ A complex and realistic network of **8 test users** with varying interaction lev
 
 ## Screenshots
 
-Total screenshots captured: **6**
+Total screenshots captured: **30**
 
-1. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
-2. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
-3. `explorer-statistics-2025-11-07T16-08-09-020Z.png`
-4. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
-5. `explorer-initial-2025-11-07T16-24-38-495Z.png`
-6. `explorer-initial-2025-11-07T16-07-42-925Z.png`
+1. `bdd-claim-flow-final-1763794918442.png`
+2. `bdd-claim-flow-final-1763794909024.png`
+3. `bdd-claim-flow-final-1763794899859.png`
+4. `bdd-claim-flow-final-1763794819990.png`
+5. `bdd-claim-flow-final-1763794816426.png`
+6. `bdd-claim-flow-final-1763794812967.png`
+7. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
+8. `theme-light-mode-2025-11-22T05-11-04-974Z.png`
+9. `social-graph-visualization-2025-11-22T05-11-02-891Z.png`
+10. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
 
 ## Conclusion
 
