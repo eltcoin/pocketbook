@@ -16,14 +16,14 @@ const TEST_PRIVATE_KEYS = [
 ];
 
 /**
- * Deploy AddressClaim contract to local Hardhat network
+ * Deploy AddressClaim and AddressHandleRegistry contracts to local Hardhat network
  * Saves deployment information for tests
  */
 async function main() {
   const signers = await hre.ethers.getSigners();
   const deployer = signers[0];
   
-  console.log('Deploying AddressClaim with account:', deployer.address);
+  console.log('Deploying contracts with account:', deployer.address);
   console.log('Account balance:', (await hre.ethers.provider.getBalance(deployer.address)).toString());
   
   // Deploy AddressClaim contract
@@ -31,8 +31,24 @@ async function main() {
   const addressClaim = await AddressClaim.deploy();
   await addressClaim.waitForDeployment();
   
-  const contractAddress = await addressClaim.getAddress();
-  console.log('AddressClaim deployed to:', contractAddress);
+  const claimContractAddress = await addressClaim.getAddress();
+  console.log('AddressClaim deployed to:', claimContractAddress);
+  
+  // Deploy AddressHandleRegistry contract
+  // Using BIP39 English wordlist: 2048 words, max 6 words per handle
+  const vocabLength = 2048;
+  const maxLength = 6;
+  // This is the SHA-256 hash of the BIP39 English wordlist
+  const vocabHash = '0xad90bf3beb7b0f762e9e9a2e1c5c3bfae2d7c2b2f5e9a5e5e5e5e5e5e5e5e5e5';
+  
+  const AddressHandleRegistry = await hre.ethers.getContractFactory('AddressHandleRegistry');
+  const handleRegistry = await AddressHandleRegistry.deploy(vocabLength, maxLength, vocabHash);
+  await handleRegistry.waitForDeployment();
+  
+  const handleRegistryAddress = await handleRegistry.getAddress();
+  console.log('AddressHandleRegistry deployed to:', handleRegistryAddress);
+  console.log('  - Vocabulary length:', vocabLength);
+  console.log('  - Max handle length:', maxLength);
   
   // Save deployment info for tests - include all 8 test accounts
   const testAccounts = [];
@@ -44,11 +60,19 @@ async function main() {
   }
   
   const deploymentInfo = {
-    contractAddress,
+    addressClaimContract: claimContractAddress,
+    handleRegistryContract: handleRegistryAddress,
+    handleRegistryConfig: {
+      vocabLength,
+      maxLength,
+      vocabHash
+    },
     deployer: deployer.address,
     testAccounts,
     networkUrl: 'http://127.0.0.1:8545',
-    chainId: 31337
+    chainId: 31337,
+    // Legacy field for backward compatibility
+    contractAddress: claimContractAddress
   };
   
   const fixturesDir = path.resolve(__dirname, '../fixtures');

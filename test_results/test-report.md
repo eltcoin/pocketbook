@@ -1,6 +1,6 @@
 # 🔖 Pocketbook Test Report
 
-**Generated:** 2025-11-22T08:05:13.226Z
+**Generated:** 2025-11-22T13:03:48.200Z
 
 ## Executive Summary
 
@@ -16,7 +16,7 @@ This report contains the results of the comprehensive test suite execution for t
 | **Skipped** | ⏭️ 0 |
 | **Duration** | 0ms |
 | **Test Suites** | 0 |
-| **Screenshots** | 30 |
+| **Screenshots** | 33 |
 
 ## Test Infrastructure
 
@@ -59,17 +59,17 @@ A complex and realistic network of **8 test users** with varying interaction lev
 
 ## Screenshots
 
-Total screenshots captured: **30**
+Total screenshots captured: **33**
 
-1. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
-2. `theme-light-mode-2025-11-22T05-11-04-974Z.png`
-3. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
+1. `theme-light-mode-2025-11-22T05-11-04-974Z.png`
+2. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
+3. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
 4. `social-graph-visualization-2025-11-22T05-11-02-891Z.png`
 5. `reputation-web-of-trust-2025-11-22T05-10-38-597Z.png`
 6. `reputation-component-2025-11-22T05-10-28-495Z.png`
 7. `reputation-attestation-2025-11-22T05-10-35-904Z.png`
-8. `multichain-network-selector-2025-11-22T05-10-00-317Z.png`
-9. `explorer-wallet-connected-2025-11-22T05-07-04-700Z.png`
+8. `explorer-wallet-connected-2025-11-22T05-07-04-700Z.png`
+9. `multichain-network-selector-2025-11-22T05-10-00-317Z.png`
 10. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
 
 ## Conclusion

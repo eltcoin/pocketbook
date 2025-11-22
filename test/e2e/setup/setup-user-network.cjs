@@ -28,21 +28,32 @@ async function setupUserNetwork() {
   const deployment = JSON.parse(fs.readFileSync(deploymentPath, 'utf8'));
   const userNetwork = JSON.parse(fs.readFileSync(userNetworkPath, 'utf8'));
 
-  // Get contract instance
+  // Get contract instances
   const AddressClaim = await hre.ethers.getContractFactory('AddressClaim');
-  const contract = AddressClaim.attach(deployment.contractAddress);
+  const contract = AddressClaim.attach(deployment.addressClaimContract || deployment.contractAddress);
+  
+  // Get handle registry contract if deployed
+  let handleRegistry = null;
+  if (deployment.handleRegistryContract) {
+    const AddressHandleRegistry = await hre.ethers.getContractFactory('AddressHandleRegistry');
+    handleRegistry = AddressHandleRegistry.attach(deployment.handleRegistryContract);
+    console.log('🏷️  Word Handle Registry:', deployment.handleRegistryContract);
+  }
 
   // Get signers (test accounts)
   const signers = await hre.ethers.getSigners();
 
-  console.log('📝 Contract Address:', deployment.contractAddress);
+  console.log('📝 AddressClaim Contract:', deployment.addressClaimContract || deployment.contractAddress);
   console.log('👥 Setting up', userNetwork.users.length, 'users\n');
 
   const setupResults = {
     successfulClaims: 0,
     failedClaims: 0,
+    successfulHandleClaims: 0,
+    failedHandleClaims: 0,
     socialConnections: 0,
-    transactionHashes: []
+    transactionHashes: [],
+    wordHandles: []
   };
 
   // Process each user
@@ -114,6 +125,50 @@ async function setupUserNetwork() {
 
       setupResults.successfulClaims++;
 
+      // Claim word handle if registry is available and user has high/medium interaction
+      if (handleRegistry && (user.interactionLevel === 'high' || user.interactionLevel === 'medium')) {
+        try {
+          console.log(`   🏷️  Claiming word handle...`);
+          
+          // Generate a simple word handle from user's address
+          // Format: length byte + word indices as 2-byte big-endian values
+          // Using first bytes of address to generate deterministic word indices
+          const addressBytes = hre.ethers.getBytes(signer.address);
+          const numWords = user.interactionLevel === 'high' ? 3 : 2;
+          
+          // Create handle bytes: [length, idx1_hi, idx1_lo, idx2_hi, idx2_lo, ...]
+          const handleBytes = new Uint8Array(1 + numWords * 2);
+          handleBytes[0] = numWords;
+          
+          for (let i = 0; i < numWords; i++) {
+            // Use address bytes to create word indices (0-2047 range for BIP39)
+            const wordIndex = ((addressBytes[i * 2] << 8) | addressBytes[i * 2 + 1]) % 2048;
+            handleBytes[1 + i * 2] = (wordIndex >> 8) & 0xff;
+            handleBytes[1 + i * 2 + 1] = wordIndex & 0xff;
+          }
+          
+          const handleRegistryWithSigner = handleRegistry.connect(signer);
+          const handleTx = await handleRegistryWithSigner.claim(handleBytes);
+          
+          console.log(`   ⏳ Handle claim tx: ${handleTx.hash}`);
+          setupResults.transactionHashes.push(handleTx.hash);
+          
+          const handleReceipt = await handleTx.wait();
+          console.log(`   ✅ Word handle claimed (block ${handleReceipt.blockNumber})`);
+          
+          setupResults.successfulHandleClaims++;
+          setupResults.wordHandles.push({
+            user: user.id,
+            address: signer.address,
+            handle: '0x' + Buffer.from(handleBytes).toString('hex'),
+            numWords
+          });
+        } catch (error) {
+          console.error(`   ⚠️  Failed to claim word handle:`, error.message);
+          setupResults.failedHandleClaims++;
+        }
+      }
+
       // Small delay between transactions
       await new Promise(resolve => setTimeout(resolve, 100));
 
@@ -130,8 +185,10 @@ async function setupUserNetwork() {
   console.log('\n' + '='.repeat(60));
   console.log('✨ User Network Setup Complete\n');
   console.log('Summary:');
-  console.log(`  ✅ Successful claims: ${setupResults.successfulClaims}`);
-  console.log(`  ❌ Failed claims: ${setupResults.failedClaims}`);
+  console.log(`  ✅ Successful address claims: ${setupResults.successfulClaims}`);
+  console.log(`  ❌ Failed address claims: ${setupResults.failedClaims}`);
+  console.log(`  ✅ Successful word handle claims: ${setupResults.successfulHandleClaims}`);
+  console.log(`  ❌ Failed word handle claims: ${setupResults.failedHandleClaims}`);
   console.log(`  📝 Total transactions: ${setupResults.transactionHashes.length}`);
   console.log('='.repeat(60) + '\n');
 
