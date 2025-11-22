@@ -59,7 +59,7 @@ module.exports = async function globalSetup() {
   console.log('🔧 Deploying test contracts...');
   
   // Deploy contracts using Hardhat
-  const deployProcess = spawn('npx', ['hardhat', 'run', 'test/e2e/setup/deploy-contracts.js', '--network', 'localhost'], {
+  const deployProcess = spawn('npx', ['hardhat', 'run', 'test/e2e/setup/deploy-contracts.cjs', '--network', 'localhost'], {
     cwd: path.resolve(__dirname, '../../..'),
     stdio: 'inherit'
   });

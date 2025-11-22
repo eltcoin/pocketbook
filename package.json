@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "<div align=\"center\">   <p>     <img src=\"https://pbs.twimg.com/media/DOZbENEXkAA2EMr.png\" width=\"250\" />   </p>   <p>     ✨ Censorship immune, Decentralised Human Network & Identity Platform ✨   </p>   <p>   </p> </div>",
   "main": "index.js",
-  "type": "module",
   "directories": {
     "test": "test"
   },
@@ -24,7 +23,10 @@
     "test:e2e:simple": "playwright test --config=playwright.config.simple.js",
     "test:e2e:web3": "bash scripts/run-all-tests-web3.sh",
     "test:e2e:all": "bash scripts/run-all-tests-web3.sh",
-    "test:setup": "bash scripts/setup-test-env.sh"
+    "test:setup": "bash scripts/setup-test-env.sh",
+    "test:comprehensive": "bash scripts/run-comprehensive-tests.sh",
+    "test:setup-network": "hardhat run test/e2e/setup/setup-user-network.cjs --network localhost",
+    "test:generate-report": "node test/e2e/helpers/generate-report.cjs"
   },
   "keywords": [],
   "author": "",

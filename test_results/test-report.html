@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pocketbook Test Report - 11/22/2025</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background: #f5f5f5;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    
+    header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 40px;
+      border-radius: 10px;
+      margin-bottom: 30px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      font-size: 1.2em;
+      opacity: 0.9;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      text-align: center;
+    }
+    
+    .stat-value {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    
+    .stat-label {
+      color: #666;
+      font-size: 0.9em;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .stat-card.passed .stat-value { color: #10b981; }
+    .stat-card.failed .stat-value { color: #ef4444; }
+    .stat-card.skipped .stat-value { color: #f59e0b; }
+    .stat-card.total .stat-value { color: #667eea; }
+    
+    .section {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      margin-bottom: 30px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    h2 {
+      color: #667eea;
+      margin-bottom: 20px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #667eea;
+    }
+    
+    .test-suite {
+      margin-bottom: 30px;
+    }
+    
+    .test-suite h3 {
+      color: #764ba2;
+      margin-bottom: 15px;
+    }
+    
+    .test-case {
+      padding: 15px;
+      margin: 10px 0;
+      border-left: 4px solid #ddd;
+      background: #f9fafb;
+      border-radius: 4px;
+    }
+    
+    .test-case.passed { border-left-color: #10b981; }
+    .test-case.failed { border-left-color: #ef4444; }
+    .test-case.skipped { border-left-color: #f59e0b; }
+    
+    .test-name {
+      font-weight: 600;
+      margin-bottom: 5px;
+    }
+    
+    .test-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .test-status.passed { background: #d1fae5; color: #065f46; }
+    .test-status.failed { background: #fee2e2; color: #991b1b; }
+    .test-status.skipped { background: #fef3c7; color: #92400e; }
+    
+    .screenshot-gallery {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 20px;
+      margin-top: 20px;
+    }
+    
+    .screenshot-item {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      overflow: hidden;
+      background: white;
+    }
+    
+    .screenshot-item img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    
+    .screenshot-info {
+      padding: 10px;
+      background: #f9fafb;
+    }
+    
+    .screenshot-name {
+      font-size: 0.85em;
+      color: #666;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .metadata {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 4px;
+      margin: 20px 0;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+    
+    .user-network {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 20px;
+    }
+    
+    .user-card {
+      background: #f9fafb;
+      padding: 15px;
+      border-radius: 8px;
+      border: 1px solid #e5e7eb;
+    }
+    
+    .user-card h4 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    
+    .user-info {
+      font-size: 0.9em;
+      color: #666;
+      line-height: 1.8;
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-size: 0.75em;
+      font-weight: 600;
+      margin-right: 5px;
+    }
+    
+    .badge.high { background: #d1fae5; color: #065f46; }
+    .badge.medium { background: #fef3c7; color: #92400e; }
+    .badge.low { background: #fee2e2; color: #991b1b; }
+    .badge.minimal { background: #f3f4f6; color: #374151; }
+    .badge.none { background: #e5e7eb; color: #6b7280; }
+    
+    footer {
+      text-align: center;
+      padding: 30px;
+      color: #666;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🔖 Pocketbook Test Report</h1>
+      <div class="subtitle">Comprehensive Test Suite Execution Results</div>
+      <div class="subtitle">2025-11-22T13:03:48.186Z</div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card total">
+        <div class="stat-label">Total Tests</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card passed">
+        <div class="stat-label">Passed</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card failed">
+        <div class="stat-label">Failed</div>
+        <div class="stat-value">0</div>
+      </div>
+      <div class="stat-card skipped">
+        <div class="stat-label">Skipped</div>
+        <div class="stat-value">0</div>
+      </div>
+    </div>
+
+    <div class="section"><h2>⚠️ No test results available</h2></div>
+    
+    <div class="section"><h2>👥 Test User Network</h2><p>Complex and realistic network of 8 test users with varying interaction levels.</p><div class="user-network">
+        <div class="user-card">
+          <h4>Alice Blockchain</h4>
+          <div class="user-info">
+            <span class="badge high">high</span><br>
+            Following: 4<br>
+            Followers: 3<br>
+            Trust Score: 95
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Bob Developer</h4>
+          <div class="user-info">
+            <span class="badge high">high</span><br>
+            Following: 3<br>
+            Followers: 3<br>
+            Trust Score: 88
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Charlie Explorer</h4>
+          <div class="user-info">
+            <span class="badge medium">medium</span><br>
+            Following: 2<br>
+            Followers: 3<br>
+            Trust Score: 65
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Diana Crypto</h4>
+          <div class="user-info">
+            <span class="badge medium">medium</span><br>
+            Following: 3<br>
+            Followers: 2<br>
+            Trust Score: 58
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Eve Newcomer</h4>
+          <div class="user-info">
+            <span class="badge low">low</span><br>
+            Following: 1<br>
+            Followers: 0<br>
+            Trust Score: 20
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Frank Lurker</h4>
+          <div class="user-info">
+            <span class="badge low">low</span><br>
+            Following: 2<br>
+            Followers: 1<br>
+            Trust Score: 15
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>Grace Silent</h4>
+          <div class="user-info">
+            <span class="badge minimal">minimal</span><br>
+            Following: 0<br>
+            Followers: 0<br>
+            Trust Score: 0
+          </div>
+        </div>
+        <div class="user-card">
+          <h4>user_7_unclaimed</h4>
+          <div class="user-info">
+            <span class="badge none">none</span><br>
+            Following: 0<br>
+            Followers: 0<br>
+            Trust Score: 0
+          </div>
+        </div></div></div>
+    
+    <div class="section"><h2>📸 Test Screenshots</h2><div class="screenshot-gallery">
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/theme-light-mode-2025-11-22T05-11-04-974Z.png" alt="theme-light-mode-2025-11-22T05-11-04-974Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">theme-light-mode-2025-11-22T05-11-04-974Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/theme-light-mode-2025-11-07T16-15-48-174Z.png" alt="theme-light-mode-2025-11-07T16-15-48-174Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">theme-light-mode-2025-11-07T16-15-48-174Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/theme-light-mode-2025-11-07T16-32-55-688Z.png" alt="theme-light-mode-2025-11-07T16-32-55-688Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">theme-light-mode-2025-11-07T16-32-55-688Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/social-graph-visualization-2025-11-22T05-11-02-891Z.png" alt="social-graph-visualization-2025-11-22T05-11-02-891Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">social-graph-visualization-2025-11-22T05-11-02-891Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/reputation-web-of-trust-2025-11-22T05-10-38-597Z.png" alt="reputation-web-of-trust-2025-11-22T05-10-38-597Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">reputation-web-of-trust-2025-11-22T05-10-38-597Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/reputation-component-2025-11-22T05-10-28-495Z.png" alt="reputation-component-2025-11-22T05-10-28-495Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">reputation-component-2025-11-22T05-10-28-495Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/reputation-attestation-2025-11-22T05-10-35-904Z.png" alt="reputation-attestation-2025-11-22T05-10-35-904Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">reputation-attestation-2025-11-22T05-10-35-904Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-wallet-connected-2025-11-22T05-07-04-700Z.png" alt="explorer-wallet-connected-2025-11-22T05-07-04-700Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-wallet-connected-2025-11-22T05-07-04-700Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/multichain-network-selector-2025-11-22T05-10-00-317Z.png" alt="multichain-network-selector-2025-11-22T05-10-00-317Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">multichain-network-selector-2025-11-22T05-10-00-317Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-statistics-2025-11-07T16-25-09-520Z.png" alt="explorer-statistics-2025-11-07T16-25-09-520Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-statistics-2025-11-07T16-25-09-520Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-statistics-2025-11-22T05-07-41-646Z.png" alt="explorer-statistics-2025-11-22T05-07-41-646Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-statistics-2025-11-22T05-07-41-646Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-statistics-2025-11-07T16-08-09-020Z.png" alt="explorer-statistics-2025-11-07T16-08-09-020Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-statistics-2025-11-07T16-08-09-020Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-initial-2025-11-07T16-24-38-495Z.png" alt="explorer-initial-2025-11-07T16-24-38-495Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-initial-2025-11-07T16-24-38-495Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-initial-2025-11-22T05-07-02-531Z.png" alt="explorer-initial-2025-11-22T05-07-02-531Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-initial-2025-11-22T05-07-02-531Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/ens-search-input-2025-11-22T05-06-59-312Z.png" alt="ens-search-input-2025-11-22T05-06-59-312Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">ens-search-input-2025-11-22T05-06-59-312Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/explorer-initial-2025-11-07T16-07-42-925Z.png" alt="explorer-initial-2025-11-07T16-07-42-925Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">explorer-initial-2025-11-07T16-07-42-925Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/ens-input-field-2025-11-22T05-06-54-589Z.png" alt="ens-input-field-2025-11-22T05-06-54-589Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">ens-input-field-2025-11-22T05-06-54-589Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/crosschain-claim-view-2025-11-22T05-06-49-808Z.png" alt="crosschain-claim-view-2025-11-22T05-06-49-808Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">crosschain-claim-view-2025-11-22T05-06-49-808Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/claim-social-fields-2025-11-22T05-06-24-083Z.png" alt="claim-social-fields-2025-11-22T05-06-24-083Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">claim-social-fields-2025-11-22T05-06-24-083Z.png</div>
+          </div>
+        </div>
+        <div class="screenshot-item">
+          <img src="../screenshots/e2e/claim-form-filled-2025-11-22T05-06-04-121Z.png" alt="claim-form-filled-2025-11-22T05-06-04-121Z.png" />
+          <div class="screenshot-info">
+            <div class="screenshot-name">claim-form-filled-2025-11-22T05-06-04-121Z.png</div>
+          </div>
+        </div></div></div>
+    
+    <div class="section">
+      <h2>📊 Test Execution Metadata</h2>
+      <div class="metadata">
+        <div>Report Generated: 2025-11-22T13:03:48.186Z</div>
+        <div>Total Duration: 0ms</div>
+        <div>Test Suites: 0</div>
+        <div>Screenshots Captured: 33</div>
+        <div>Test Users: 8</div>
+      </div>
+    </div>
+
+    <footer>
+      Generated by Pocketbook Test Infrastructure<br>
+      © 2025 - All Rights Reserved
+    </footer>
+  </div>
+</body>
+</html>
