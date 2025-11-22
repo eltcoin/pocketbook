@@ -148,7 +148,7 @@ fi
 
 # Step 8: Generate reports
 echo -e "\n${BLUE}📊 Step 8: Generating test reports...${NC}"
-node test/e2e/helpers/generate-report.js
+node test/e2e/helpers/generate-report.cjs
 echo -e "${GREEN}  ✓ Reports generated${NC}"
 
 # Step 9: Display summary

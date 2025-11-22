@@ -27,7 +27,7 @@
     "test:setup": "bash scripts/setup-test-env.sh",
     "test:comprehensive": "bash scripts/run-comprehensive-tests.sh",
     "test:setup-network": "hardhat run test/e2e/setup/setup-user-network.js --network localhost",
-    "test:generate-report": "node test/e2e/helpers/generate-report.js"
+    "test:generate-report": "node test/e2e/helpers/generate-report.cjs"
   },
   "keywords": [],
   "author": "",
