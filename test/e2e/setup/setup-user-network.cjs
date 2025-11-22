@@ -85,8 +85,14 @@ async function setupUserNetwork() {
       console.log(`   📋 Claiming address: ${signer.address}`);
       console.log(`   📝 Name: ${metadata.name}`);
 
-      // Submit claim transaction
+      // Create a dummy signature (for testing purposes)
+      // In production, this would be a real signature
+      const dummySignature = '0x' + '0'.repeat(130);
+
+      // Submit claim transaction with address and signature as first parameters
       const tx = await contractWithSigner.claimAddress(
+        signer.address,
+        dummySignature,
         metadata.name,
         metadata.avatar,
         metadata.bio,

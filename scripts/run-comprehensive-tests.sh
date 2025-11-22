@@ -103,12 +103,12 @@ done
 
 # Step 4: Deploy contracts
 echo -e "\n${BLUE}🚢 Step 4: Deploying contracts to local network...${NC}"
-npx hardhat run test/e2e/setup/deploy-contracts.js --network localhost
+npx hardhat run test/e2e/setup/deploy-contracts.cjs --network localhost
 echo -e "${GREEN}  ✓ Contracts deployed${NC}"
 
 # Step 5: Setup user network
 echo -e "\n${BLUE}👥 Step 5: Configuring test user network...${NC}"
-npx hardhat run test/e2e/setup/setup-user-network.js --network localhost
+npx hardhat run test/e2e/setup/setup-user-network.cjs --network localhost
 echo -e "${GREEN}  ✓ User network configured${NC}"
 
 # Step 6: Start dev server
@@ -138,7 +138,7 @@ echo -e "\n${BLUE}🧪 Step 7: Running E2E test suite...${NC}"
 echo "  This may take several minutes..."
 
 # Run Playwright tests with explicit output paths
-if npx playwright test --reporter=list --reporter=json:test-results/results.json --reporter=html:playwright-report; then
+if npx playwright test --reporter=list --reporter=json --reporter=html; then
   echo -e "${GREEN}  ✓ Tests completed${NC}"
   TEST_STATUS="passed"
 else

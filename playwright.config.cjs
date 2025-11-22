@@ -53,16 +53,18 @@ export default defineConfig({
   ],
   
   // Web server configuration - start dev server before tests
-  webServer: {
-    command: 'npm run dev',
-    url: 'http://localhost:3000',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120 * 1000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-  },
+  // Commented out since the test runner script already starts the server
+  // webServer: {
+  //   command: 'npm run dev',
+  //   url: 'http://localhost:3000',
+  //   reuseExistingServer: !process.env.CI,
+  //   timeout: 120 * 1000,
+  //   stdout: 'ignore',
+  //   stderr: 'pipe',
+  // },
   
   // Global setup and teardown
-  globalSetup: require.resolve('./test/e2e/setup/global-setup.js'),
-  globalTeardown: require.resolve('./test/e2e/setup/global-teardown.js'),
+  // Commented out since the test runner script handles Hardhat and Vite setup
+  // globalSetup: require.resolve('./test/e2e/setup/global-setup.cjs'),
+  // globalTeardown: require.resolve('./test/e2e/setup/global-teardown.cjs'),
 });

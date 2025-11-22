@@ -26,7 +26,7 @@
     "test:e2e:all": "bash scripts/run-all-tests-web3.sh",
     "test:setup": "bash scripts/setup-test-env.sh",
     "test:comprehensive": "bash scripts/run-comprehensive-tests.sh",
-    "test:setup-network": "hardhat run test/e2e/setup/setup-user-network.js --network localhost",
+    "test:setup-network": "hardhat run test/e2e/setup/setup-user-network.cjs --network localhost",
     "test:generate-report": "node test/e2e/helpers/generate-report.cjs"
   },
   "keywords": [],

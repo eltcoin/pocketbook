@@ -1,6 +1,6 @@
 # 🔖 Pocketbook Test Report
 
-**Generated:** 2025-11-22T04:38:46.437Z
+**Generated:** 2025-11-22T04:52:43.915Z
 
 ## Executive Summary
 
@@ -56,18 +56,16 @@ A complex and realistic network of **8 test users** with varying interaction lev
 - **Claimed Addresses:** 7
 - **Unclaimed Addresses:** 1
 
-## Test Suites
-
 
 ## Screenshots
 
 Total screenshots captured: **6**
 
-1. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
-2. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
-3. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
-4. `explorer-initial-2025-11-07T16-24-38-495Z.png`
-5. `explorer-statistics-2025-11-07T16-08-09-020Z.png`
+1. `theme-light-mode-2025-11-07T16-15-48-174Z.png`
+2. `theme-light-mode-2025-11-07T16-32-55-688Z.png`
+3. `explorer-statistics-2025-11-07T16-08-09-020Z.png`
+4. `explorer-statistics-2025-11-07T16-25-09-520Z.png`
+5. `explorer-initial-2025-11-07T16-24-38-495Z.png`
 6. `explorer-initial-2025-11-07T16-07-42-925Z.png`
 
 ## Conclusion
