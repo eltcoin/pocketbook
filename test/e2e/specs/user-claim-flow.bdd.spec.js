@@ -35,16 +35,10 @@ test.describe('Feature: User Address Claiming', () => {
   });
 
   test.describe('Scenario: New user claims their address with complete profile', () => {
-    let page;
-    const testUser = () => userNetwork.users.find(u => u.id === 'user_0_high_interaction');
-
-    test.beforeEach(async ({ browser }) => {
-      page = await browser.newPage();
+    test('When I connect my wallet and fill out the claim form', async ({ page }, testInfo) => {
+      const user = userNetwork.users.find(u => u.id === 'user_0_high_interaction');
       
-      // Given: I am a new user visiting the Pocketbook platform
-      await page.goto('http://localhost:3000');
-      
-      // And: I have a Web3 wallet configured
+      // And: I have a Web3 wallet configured (MUST be before page.goto)
       await page.addInitScript(({ address, chainId }) => {
         window.ethereum = {
           isMetaMask: true,
@@ -61,20 +55,10 @@ test.describe('Feature: User Address Claiming', () => {
           on: () => {},
           removeListener: () => {}
         };
-      }, { address: deployment.testAccounts[0].address, chainId: deployment.chainId });
-    });
-
-    test.afterEach(async () => {
-      // Capture final state screenshot
-      await page.screenshot({ 
-        path: `screenshots/e2e/bdd-claim-flow-final-${Date.now()}.png`,
-        fullPage: true 
-      });
-      await page.close();
-    });
-
-    test('When I connect my wallet and fill out the claim form', async ({ }, testInfo) => {
-      const user = testUser();
+      }, { address: deployment.testAccounts[user.accountIndex].address, chainId: deployment.chainId });
+      
+      // Given: I am a new user visiting the Pocketbook platform
+      await page.goto('http://localhost:3000');
       
       // When: I click the connect wallet button
       await test.step('Connect wallet', async () => {
@@ -82,12 +66,12 @@ test.describe('Feature: User Address Claiming', () => {
         await connectButton.waitFor({ state: 'visible', timeout: 10000 });
         await connectButton.click();
         
-        // Then: Wallet should be connected (we set up the mock in beforeEach)
+        // Then: Wallet should be connected (we set up the mock before page load)
         // Wait for connection to process
         await page.waitForTimeout(2000);
         
         // Verify the mock wallet is set up correctly
-        const mockAddress = deployment.testAccounts[0].address;
+        const mockAddress = deployment.testAccounts[user.accountIndex].address;
         expect(mockAddress).toBeTruthy();
         
         await testInfo.attach('01-wallet-connected', {
@@ -189,6 +173,12 @@ test.describe('Feature: User Address Claiming', () => {
         // Verify the test completed without exceptions
         // Note: In a production environment, this should check success indicators strictly
         expect(page).toBeTruthy();
+      });
+      
+      // Capture final state screenshot
+      await testInfo.attach('06-final-screenshot', {
+        body: await page.screenshot({ fullPage: true }),
+        contentType: 'image/png'
       });
     });
   });
