@@ -286,6 +286,8 @@ class TestReportGenerator {
     .badge.high { background: #d1fae5; color: #065f46; }
     .badge.medium { background: #fef3c7; color: #92400e; }
     .badge.low { background: #fee2e2; color: #991b1b; }
+    .badge.minimal { background: #f3f4f6; color: #374151; }
+    .badge.none { background: #e5e7eb; color: #6b7280; }
     
     footer {
       text-align: center;
@@ -408,7 +410,10 @@ class TestReportGenerator {
     
     userNetwork.users.forEach(user => {
       const level = user.interactionLevel;
-      const badgeClass = level === 'high' ? 'high' : level === 'medium' ? 'medium' : 'low';
+      const badgeClass = level === 'high' ? 'high' : 
+                        level === 'medium' ? 'medium' : 
+                        level === 'minimal' ? 'minimal' :
+                        level === 'none' ? 'none' : 'low';
       
       html += `
         <div class="user-card">

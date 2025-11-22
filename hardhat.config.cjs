@@ -24,7 +24,21 @@ module.exports = {
           },
         },
       }
-    ]
+    ],
+    // The following overrides ensure that contracts with "Stack too deep" errors are compiled with viaIR enabled.
+    // AddressClaim.sol requires viaIR to compile due to stack depth issues.
+    overrides: {
+      "contracts/AddressClaim.sol": {
+        version: "0.8.20",
+        settings: {
+          viaIR: true,
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    }
   },
   paths: {
     sources: "./contracts",
