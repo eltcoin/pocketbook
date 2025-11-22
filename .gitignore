@@ -12,4 +12,11 @@ test-results/
 playwright-report/
 .playwright/
 .hardhat-node.pid
+.vite-server.pid
 # Note: test/e2e/fixtures/deployment.json is tracked for testing purposes
+
+# Test results (generated)
+test/e2e/fixtures/setup-results.json
+
+# Temporary logs
+/tmp/*.log

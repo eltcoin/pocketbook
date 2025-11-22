@@ -1,0 +1,262 @@
+{
+  "description": "Complex and realistic network of test users with varying interaction levels",
+  "users": [
+    {
+      "id": "user_0_high_interaction",
+      "accountIndex": 0,
+      "interactionLevel": "high",
+      "profile": {
+        "name": "Alice Blockchain",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=alice",
+        "bio": "Blockchain enthusiast and early adopter. Building the future of decentralized identity.",
+        "website": "https://alice-blockchain.example.com",
+        "twitter": "@alice_chain",
+        "github": "alice-blockchain",
+        "publicKey": "0x04a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1",
+        "pgpSignature": "-----BEGIN PGP SIGNATURE-----\niQEzBAABCAAdFiEE...\n-----END PGP SIGNATURE-----",
+        "isPrivate": false,
+        "ipfsCID": "QmYwAPJzv5CZsnA625s3Xf2nemtYgPpHdWEz79ojWnPbdG"
+      },
+      "socialConnections": {
+        "following": ["user_1_high_interaction", "user_2_medium_interaction", "user_3_medium_interaction", "user_5_low_interaction"],
+        "followers": ["user_1_high_interaction", "user_2_medium_interaction", "user_4_low_interaction"],
+        "friends": ["user_1_high_interaction", "user_2_medium_interaction"]
+      },
+      "reputation": {
+        "trustScore": 95,
+        "attestationsGiven": 8,
+        "attestationsReceived": 12
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-22T00:00:00.000Z",
+        "transactionCount": 25
+      }
+    },
+    {
+      "id": "user_1_high_interaction",
+      "accountIndex": 1,
+      "interactionLevel": "high",
+      "profile": {
+        "name": "Bob Developer",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=bob",
+        "bio": "Full-stack developer passionate about Web3 and decentralization.",
+        "website": "https://bobdev.example.com",
+        "twitter": "@bob_dev",
+        "github": "bob-developer",
+        "publicKey": "0x04b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2",
+        "pgpSignature": "-----BEGIN PGP SIGNATURE-----\niQEzBAABCAAdFiEE...\n-----END PGP SIGNATURE-----",
+        "isPrivate": false,
+        "ipfsCID": "QmPZ9gcCEpqKTo6aq61g4nXGUhM4iCL2gXF6d7J5KJ8aD3"
+      },
+      "socialConnections": {
+        "following": ["user_0_high_interaction", "user_2_medium_interaction", "user_3_medium_interaction"],
+        "followers": ["user_0_high_interaction", "user_3_medium_interaction", "user_5_low_interaction"],
+        "friends": ["user_0_high_interaction"]
+      },
+      "reputation": {
+        "trustScore": 88,
+        "attestationsGiven": 6,
+        "attestationsReceived": 9
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-21T18:30:00.000Z",
+        "transactionCount": 18
+      }
+    },
+    {
+      "id": "user_2_medium_interaction",
+      "accountIndex": 2,
+      "interactionLevel": "medium",
+      "profile": {
+        "name": "Charlie Explorer",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=charlie",
+        "bio": "Exploring the decentralized web one dApp at a time.",
+        "website": "",
+        "twitter": "@charlie_exp",
+        "github": "",
+        "publicKey": "0x04c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3",
+        "pgpSignature": "",
+        "isPrivate": false,
+        "ipfsCID": ""
+      },
+      "socialConnections": {
+        "following": ["user_0_high_interaction", "user_1_high_interaction"],
+        "followers": ["user_0_high_interaction", "user_1_high_interaction", "user_3_medium_interaction"],
+        "friends": ["user_0_high_interaction"]
+      },
+      "reputation": {
+        "trustScore": 65,
+        "attestationsGiven": 3,
+        "attestationsReceived": 5
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-20T12:00:00.000Z",
+        "transactionCount": 8
+      }
+    },
+    {
+      "id": "user_3_medium_interaction",
+      "accountIndex": 3,
+      "interactionLevel": "medium",
+      "profile": {
+        "name": "Diana Crypto",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=diana",
+        "bio": "Crypto enthusiast and investor",
+        "website": "https://diana-crypto.example.com",
+        "twitter": "",
+        "github": "diana-crypto",
+        "publicKey": "0x04d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2c3d4",
+        "pgpSignature": "",
+        "isPrivate": true,
+        "ipfsCID": "QmTzQ1Jg7DjHZBNQkjMCmx3g8nXqh3qGQ8vZz9qJmJmJmJ"
+      },
+      "socialConnections": {
+        "following": ["user_0_high_interaction", "user_1_high_interaction", "user_2_medium_interaction"],
+        "followers": ["user_1_high_interaction", "user_2_medium_interaction"],
+        "friends": []
+      },
+      "reputation": {
+        "trustScore": 58,
+        "attestationsGiven": 2,
+        "attestationsReceived": 4
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-19T09:15:00.000Z",
+        "transactionCount": 6
+      }
+    },
+    {
+      "id": "user_4_low_interaction",
+      "accountIndex": 4,
+      "interactionLevel": "low",
+      "profile": {
+        "name": "Eve Newcomer",
+        "avatar": "",
+        "bio": "Just getting started with Web3",
+        "website": "",
+        "twitter": "",
+        "github": "",
+        "publicKey": "",
+        "pgpSignature": "",
+        "isPrivate": false,
+        "ipfsCID": ""
+      },
+      "socialConnections": {
+        "following": ["user_0_high_interaction"],
+        "followers": [],
+        "friends": []
+      },
+      "reputation": {
+        "trustScore": 20,
+        "attestationsGiven": 0,
+        "attestationsReceived": 1
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-18T16:45:00.000Z",
+        "transactionCount": 2
+      }
+    },
+    {
+      "id": "user_5_low_interaction",
+      "accountIndex": 5,
+      "interactionLevel": "low",
+      "profile": {
+        "name": "Frank Lurker",
+        "avatar": "https://api.dicebear.com/7.x/avataaars/svg?seed=frank",
+        "bio": "",
+        "website": "",
+        "twitter": "",
+        "github": "",
+        "publicKey": "",
+        "pgpSignature": "",
+        "isPrivate": false,
+        "ipfsCID": ""
+      },
+      "socialConnections": {
+        "following": ["user_0_high_interaction", "user_1_high_interaction"],
+        "followers": ["user_0_high_interaction"],
+        "friends": []
+      },
+      "reputation": {
+        "trustScore": 15,
+        "attestationsGiven": 0,
+        "attestationsReceived": 0
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-15T14:20:00.000Z",
+        "transactionCount": 1
+      }
+    },
+    {
+      "id": "user_6_minimal",
+      "accountIndex": 6,
+      "interactionLevel": "minimal",
+      "profile": {
+        "name": "Grace Silent",
+        "avatar": "",
+        "bio": "",
+        "website": "",
+        "twitter": "",
+        "github": "",
+        "publicKey": "",
+        "pgpSignature": "",
+        "isPrivate": false,
+        "ipfsCID": ""
+      },
+      "socialConnections": {
+        "following": [],
+        "followers": [],
+        "friends": []
+      },
+      "reputation": {
+        "trustScore": 0,
+        "attestationsGiven": 0,
+        "attestationsReceived": 0
+      },
+      "activity": {
+        "claimsMade": 1,
+        "lastActive": "2025-11-10T10:00:00.000Z",
+        "transactionCount": 1
+      }
+    },
+    {
+      "id": "user_7_unclaimed",
+      "accountIndex": 7,
+      "interactionLevel": "none",
+      "profile": null,
+      "socialConnections": {
+        "following": [],
+        "followers": [],
+        "friends": []
+      },
+      "reputation": {
+        "trustScore": 0,
+        "attestationsGiven": 0,
+        "attestationsReceived": 0
+      },
+      "activity": {
+        "claimsMade": 0,
+        "lastActive": null,
+        "transactionCount": 0
+      }
+    }
+  ],
+  "networkStats": {
+    "totalUsers": 8,
+    "claimedAddresses": 7,
+    "unclaimedAddresses": 1,
+    "highInteraction": 2,
+    "mediumInteraction": 2,
+    "lowInteraction": 2,
+    "minimal": 1,
+    "none": 1,
+    "totalConnections": 15,
+    "totalAttestations": 40
+  }
+}
