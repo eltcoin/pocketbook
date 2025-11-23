@@ -288,7 +288,7 @@ export async function getTransactions(provider, address, chainId, options = {}) 
     const allTransactions = [];
     
     // Create batch promises array
-    const batchPromises = [];
+    let batchPromises = [];
     
     for (let block = currentBlock; block >= startBlock; block -= batchSize) {
       const fromBlock = Math.max(startBlock, block - batchSize + 1);

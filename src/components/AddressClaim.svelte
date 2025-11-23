@@ -12,6 +12,7 @@
     decodeHandle,
     suggestHandleIndices,
   } from "../utils/wordhandles";
+  import EmojiPicker from './EmojiPicker.svelte';
 
   const dispatch = createEventDispatcher();
 
@@ -409,8 +410,18 @@
       return;
     }
 
-    if (!formData.name) {
-      error = "Name is required";
+    if (!formData.name || formData.name.trim().length === 0) {
+      error = "Name is required and cannot be empty";
+      return;
+    }
+
+    if (formData.name.trim().length < 2) {
+      error = "Name must be at least 2 characters long";
+      return;
+    }
+
+    if (formData.website && !formData.website.match(/^https?:\/\/.+/)) {
+      error = "Website must be a valid URL starting with http:// or https://";
       return;
     }
 
@@ -552,17 +563,35 @@
           bind:value={formData.name}
           placeholder="Your Name or ENS"
           required
+          minlength="2"
+          class:has-value={formData.name && formData.name.length > 0}
         />
+        {#if formData.name && formData.name.trim().length > 0 && formData.name.trim().length < 2}
+          <small class="form-hint error">Name must be at least 2 characters</small>
+        {:else if formData.name && formData.name.trim().length >= 2}
+          <small class="form-hint success">✓ Valid name</small>
+        {/if}
       </div>
 
       <div class="form-group">
         <label for="avatar">Avatar (Emoji or URL)</label>
-        <input
-          id="avatar"
-          type="text"
-          bind:value={formData.avatar}
-          placeholder="😊 or https://..."
-        />
+        <div class="avatar-input-group">
+          <div class="emoji-picker-container">
+            <EmojiPicker
+              selectedEmoji={formData.avatar && !formData.avatar.startsWith('http') ? formData.avatar : ''}
+              on:select={(e) => formData.avatar = e.detail.emoji}
+            />
+          </div>
+          <div class="avatar-text-input">
+            <input
+              id="avatar"
+              type="text"
+              bind:value={formData.avatar}
+              placeholder="😊 or https://image-url.com"
+            />
+          </div>
+        </div>
+        <small class="form-hint">Choose an emoji or paste an image URL</small>
       </div>
 
       <div class="form-group">
@@ -582,7 +611,13 @@
           type="url"
           bind:value={formData.website}
           placeholder="https://yourwebsite.com"
+          class:has-value={formData.website && formData.website.length > 0}
         />
+        {#if formData.website && formData.website.length > 0 && !formData.website.match(/^https?:\/\/.+/)}
+          <small class="form-hint error">URL must start with http:// or https://</small>
+        {:else if formData.website && formData.website.match(/^https?:\/\/.+/)}
+          <small class="form-hint success">✓ Valid URL</small>
+        {/if}
       </div>
 
       <div class="form-row">
@@ -999,6 +1034,25 @@
     gap: 1rem;
   }
 
+  .avatar-input-group {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 1rem;
+    align-items: start;
+  }
+
+  .emoji-picker-container {
+    width: 100%;
+  }
+
+  .avatar-text-input {
+    flex: 1;
+  }
+
+  .avatar-text-input input {
+    width: 100%;
+  }
+
   label {
     display: block;
     margin-bottom: 0.5rem;
@@ -1052,10 +1106,39 @@
     margin-top: 0.25rem;
     font-size: 0.875rem;
     color: #64748b;
+    transition: all 0.2s ease;
   }
 
   .claim-container.dark .form-hint {
     color: #94a3b8;
+  }
+
+  .form-hint.error {
+    color: #dc2626;
+    font-weight: 500;
+  }
+
+  .claim-container.dark .form-hint.error {
+    color: #fca5a5;
+  }
+
+  .form-hint.success {
+    color: #059669;
+    font-weight: 500;
+  }
+
+  .claim-container.dark .form-hint.success {
+    color: #6ee7b7;
+  }
+
+  input.has-value,
+  textarea.has-value {
+    border-color: #94a3b8;
+  }
+
+  .claim-container.dark input.has-value,
+  .claim-container.dark textarea.has-value {
+    border-color: #64748b;
   }
 
   .checkbox-group label {
@@ -1118,8 +1201,16 @@
   }
 
   .btn-claim:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    background: #94a3b8;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .claim-container.dark .btn-claim:disabled {
+    background: #475569;
+    color: #94a3b8;
   }
 
   .handle-section {
@@ -1295,8 +1386,16 @@
   }
 
   .btn-secondary:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    background: #f1f5f9;
+    color: #94a3b8;
+    transform: none;
+  }
+
+  .claim-container.dark .btn-secondary:disabled {
+    background: #1e293b;
+    color: #64748b;
   }
 
   .btn-handle-claim {
@@ -1318,8 +1417,16 @@
   }
 
   .btn-handle-claim:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    background: #94a3b8;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .claim-container.dark .btn-handle-claim:disabled {
+    background: #475569;
+    color: #94a3b8;
   }
 
   .btn-release {
@@ -1341,8 +1448,17 @@
   }
 
   .btn-release:disabled {
-    opacity: 0.6;
+    opacity: 0.5;
     cursor: not-allowed;
+    background: #f1f5f9;
+    color: #94a3b8;
+    border-color: #e2e8f0;
+  }
+
+  .claim-container.dark .btn-release:disabled {
+    background: #1e293b;
+    color: #64748b;
+    border-color: #334155;
   }
 
   .info-box {
@@ -1406,6 +1522,28 @@
 
     .claim-form {
       padding: 1.5rem;
+    }
+
+    .avatar-input-group {
+      grid-template-columns: 1fr;
+    }
+
+    .handle-header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .handle-caption {
+      justify-content: flex-start;
+    }
+
+    .handle-actions {
+      flex-direction: column;
+    }
+
+    .btn-secondary,
+    .btn-handle-claim {
+      width: 100%;
     }
   }
 </style>

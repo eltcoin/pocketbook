@@ -1,5 +1,6 @@
 <script>
   import { onMount } from 'svelte';
+  import { fade, fly } from 'svelte/transition';
   import { multiChainStore } from './stores/multichain';
   import { themeStore } from './stores/theme';
   import { currentRoute, navigate } from './utils/router';
@@ -56,15 +57,19 @@
   <Header on:viewChange={handleViewChange} />
   
   <div class="container">
-    {#if currentView === 'explorer'}
-      <Explorer on:viewAddress={handleViewChange} />
-    {:else if currentView === 'claim'}
-      <AddressClaim on:viewChange={handleViewChange} />
-    {:else if currentView === 'address' && selectedAddress}
-      <AddressView address={selectedAddress} ensName={selectedENSName} on:viewChange={handleViewChange} />
-    {:else if currentView === 'admin'}
-      <AdminPanel on:viewChange={handleViewChange} />
-    {/if}
+    {#key currentView}
+      <div in:fly="{{ y: 20, duration: 300, delay: 150 }}" out:fade="{{ duration: 150 }}">
+        {#if currentView === 'explorer'}
+          <Explorer on:viewAddress={handleViewChange} />
+        {:else if currentView === 'claim'}
+          <AddressClaim on:viewChange={handleViewChange} />
+        {:else if currentView === 'address' && selectedAddress}
+          <AddressView address={selectedAddress} ensName={selectedENSName} on:viewChange={handleViewChange} />
+        {:else if currentView === 'admin'}
+          <AdminPanel on:viewChange={handleViewChange} />
+        {/if}
+      </div>
+    {/key}
   </div>
   
   <Toast />

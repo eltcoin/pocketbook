@@ -6,6 +6,7 @@
   import { themeStore } from "../stores/theme";
   import { resolveAddressOrENS, isENSName } from "../utils/ens";
   import { parseClaimData } from "../utils/claimParser";
+  import { navigate } from "../utils/router";
   import {
     loadWordlist,
     decodeHandle,
@@ -1333,7 +1334,22 @@
 
   <div class="recent-claims">
     <h3>Recent Claims</h3>
-    {#if recentClaims.length > 0}
+    {#if loadingStats && recentClaims.length === 0}
+      <div class="claims-grid">
+        {#each Array(3) as _, i}
+          <div class="claim-card skeleton">
+            <div class="skeleton-chip"></div>
+            <div class="skeleton-avatar"></div>
+            <div class="claim-info">
+              <div class="skeleton-line" style="width: 60%; height: 20px; margin-bottom: 0.375rem;"></div>
+              <div class="skeleton-line" style="width: 80%; height: 14px; margin-bottom: 0.375rem;"></div>
+              <div class="skeleton-line" style="width: 40%; height: 14px;"></div>
+            </div>
+            <div class="skeleton-badge"></div>
+          </div>
+        {/each}
+      </div>
+    {:else if recentClaims.length > 0}
       <div class="claims-grid">
         {#each recentClaims as claim}
           <div class="claim-card" on:click={() => viewAddress(claim.address)}>
@@ -1359,7 +1375,16 @@
     {:else}
       <div class="empty-state">
         <Icon name="inbox" size="3rem" />
-        <p>No claims found yet. Be the first to claim your address!</p>
+        <h4>No Claims Yet</h4>
+        <p>Be the first to claim your address and join the decentralized identity network!</p>
+        {#if connected && !hasExistingClaim}
+          <button class="btn-empty-state" on:click={() => navigate('/claim')}>
+            <Icon name="id-card" size="1.125rem" />
+            Claim Your Address
+          </button>
+        {:else if !connected}
+          <p class="empty-hint">Connect your wallet to get started</p>
+        {/if}
       </div>
     {/if}
   </div>
@@ -1660,9 +1685,54 @@
     color: #64748b;
   }
 
+  .empty-state h4 {
+    margin: 1rem 0 0.5rem;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .explorer.dark .empty-state h4 {
+    color: #f1f5f9;
+  }
+
   .empty-state p {
-    margin-top: 1rem;
+    margin-top: 0.5rem;
     font-size: 1rem;
+    color: #64748b;
+  }
+
+  .explorer.dark .empty-state p {
+    color: #94a3b8;
+  }
+
+  .empty-hint {
+    font-size: 0.875rem !important;
+    color: #94a3b8 !important;
+    margin-top: 1rem !important;
+  }
+
+  .btn-empty-state {
+    margin-top: 1.5rem;
+    background: var(--accent-primary);
+    color: #ffffff;
+    border: none;
+    padding: 0.875rem 1.75rem;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.625rem;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+
+  .btn-empty-state:hover {
+    background: var(--accent-primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
   }
 
   .claims-grid {
@@ -1938,8 +2008,14 @@
   }
 
   @media (max-width: 768px) {
+    .hero {
+      padding: 2rem 0;
+    }
+
     .hero h2 {
-      font-size: 2rem;
+      font-size: 1.75rem;
+      flex-direction: column;
+      gap: 0.5rem;
     }
 
     .hero p {
@@ -1948,9 +2024,47 @@
 
     .search-bar {
       flex-direction: column;
+      padding: 0.5rem;
+    }
+
+    .search-bar input {
+      padding: 0.875rem;
+    }
+
+    .btn-search {
+      width: 100%;
+      justify-content: center;
+      padding: 0.875rem;
+    }
+
+    .stats {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+
+    .stat-card {
+      padding: 1.5rem;
     }
 
     .claims-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .claim-card {
+      flex-direction: column;
+      text-align: center;
+      align-items: center;
+    }
+
+    .claim-info {
+      text-align: center;
+    }
+
+    .chain-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .info-section {
       grid-template-columns: 1fr;
     }
   }
@@ -2088,6 +2202,71 @@
 
   .explorer.dark .claim-integration-header p {
     color: #94a3b8;
+  }
+
+  /* Skeleton Loading States */
+  .claim-card.skeleton {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  .skeleton-chip,
+  .skeleton-avatar,
+  .skeleton-badge,
+  .skeleton-line {
+    background: linear-gradient(
+      90deg,
+      #e2e8f0 0%,
+      #f1f5f9 50%,
+      #e2e8f0 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+  }
+
+  .explorer.dark .skeleton-chip,
+  .explorer.dark .skeleton-avatar,
+  .explorer.dark .skeleton-badge,
+  .explorer.dark .skeleton-line {
+    background: linear-gradient(
+      90deg,
+      #1e293b 0%,
+      #334155 50%,
+      #1e293b 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  .skeleton-chip {
+    width: 120px;
+    height: 24px;
+    margin-bottom: 0.5rem;
+  }
+
+  .skeleton-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+  }
+
+  .skeleton-badge {
+    width: 80px;
+    height: 32px;
+    border-radius: 8px;
+  }
+
+  .skeleton-line {
+    border-radius: 4px;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 
 </style>
